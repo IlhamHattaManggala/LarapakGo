@@ -1,11 +1,9 @@
 # Binaries
-*.exe
 *.exe~
 *.dll
 *.so
 *.dylib
 bin/
-dist/
 
 # Test binary
 *.test
