@@ -2,7 +2,48 @@
 
 **Larapak MVC Web Framework versi Golang (Go 1.25+)**
 
-LarapakGo adalah adaptasi performa tinggi dari ekosistem web framework Larapak yang ditulis murni dalam bahasa pemrograman **Go (Golang)**. Mengadopsi arsitektur lengkap ala Laravel, dialek lokal Ngapak yang ramah, dan performa tinggi khas Go dengan **100% Go Standard Library** tanpa ketergantungan paket eksternal pihak ketiga yang membengkak.
+LarapakGo adalah adaptasi performa tinggi dari ekosistem web framework Larapak yang ditulis murni dalam bahasa pemrograman **Go (Golang)**. Mengadopsi arsitektur lengkap ala Laravel, dialek lokal Ngapak Tegalan yang ramah dan lugas, serta performa tinggi khas Go dengan **100% Go Standard Library** tanpa ketergantungan paket eksternal pihak ketiga yang membengkak.
+
+---
+
+## Cara Instalasi Rikat (One-Line Installer)
+
+Anda bisa langsung memasang binary mandiri `larapak` ke sistem operasi Anda hanya dengan satu baris perintah tanpa perlu mengompilasi manual:
+
+### 1. Windows (PowerShell)
+Buka terminal PowerShell lalu jalankan:
+```powershell
+irm https://raw.githubusercontent.com/IlhamHattaManggala/LarapakGo/main/install.ps1 | iex
+```
+*Installer ini otomatis mengunduh `larapak.exe` ke `$HOME\.larapak\bin` dan mendaftarkannya ke variabel Environment PATH User Anda.*
+
+### 2. Linux & macOS (Bash / Zsh)
+Buka terminal lalu jalankan:
+```bash
+curl -fsSL https://raw.githubusercontent.com/IlhamHattaManggala/LarapakGo/main/install.sh | bash
+```
+*Installer ini mendeteksi arsitektur sistem (`x86_64` / `arm64`), mengunduh binary ke `$HOME/.larapak/bin`, mengatur izin eksekusi (`chmod +x`), dan menyelaraskan `$PATH` profil shell Anda (`~/.bashrc` / `~/.zshrc`).*
+
+---
+
+## Dukungan Visual Studio Code (Syntax Highlighting)
+
+Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) nyaman dengan pewarnaan sintaks dan autocomplete snippets, pasang ekstensi resmi **`larapak-vscode`**:
+
+### Cara Pasang Ekstensi:
+1. Unduh berkas `larapak-vscode-1.2.2.vsix` dari folder `dist/` repositori ini.
+2. Di terminal, jalankan perintah:
+   ```bash
+   code --install-extension dist/larapak-vscode-1.2.2.vsix
+   ```
+   *Atau dari VS Code: Buka tab Extensions (`Ctrl+Shift+X`) -> Klik ikon menu `...` di kanan atas -> Pilih **Install from VSIX...** -> Pilih berkas `larapak-vscode-1.2.2.vsix`.*
+
+### Fitur Ekstensi:
+- **Pewarnaan Sintaks `.ngpk`**: Menyorot seluruh kata kunci (`nek`, `ya`, `liyane`, `rampung`, `baleni`, `saka`, `nganti`, `gawe`, `balekna`, `kelas`, `extends`, `mandeg`, `terusna`), operator logika (`lan`, `utawa`, `ora`, `neng`), konstanta (`bener`, `salah`, `kosong`), serta objek bawaan web (`rute`, `req`, `res`, `tulis`).
+- **Pewarnaan Sintaks `.nview`**: Menyorot direktif template (`@layout`, `@section`, `@endsection`, `@yield`, `@csrf`, `@include`) dan interpolasi variabel (`{{ var }}`, `{!! raw !!}`).
+- **Snippets Produktif**:
+  - Di `.ngpk`: `rute:get`, `rute:post`, `gawe`, `nek`, `nek:liyane`, `baleni:range`, `baleni:neng`.
+  - Di `.nview`: `layout`, `section`, `yield`, `csrf`, `var`, `raw`.
 
 ---
 
@@ -130,11 +171,27 @@ func main() {
 LarapakGo/
 ├── go.mod                     # Modul Go
 ├── README.md                  # Dokumentasi
+├── LICENSE                    # Lisensi MIT
 ├── .gitignore                 # Filter git
-├── dist/                      # Rilis binary mandiri lintas platform
+├── install.ps1                # Skrip instalasi satu baris untuk Windows (PowerShell)
+├── install.sh                 # Skrip instalasi satu baris untuk Linux & macOS (Bash)
+├── larapak.exe                # Binary mandiri root Windows
+├── dist/                      # Rilis binary mandiri lintas platform & ekstensi
 │   ├── larapak-v1.2.2-windows-amd64.exe
 │   ├── larapak-v1.2.2-linux-amd64
-│   └── larapak-v1.2.2-darwin-arm64
+│   ├── larapak-v1.2.2-darwin-arm64
+│   └── larapak-vscode-1.2.2.vsix
+├── editors/
+│   └── vscode/                # Paket ekstensi Visual Studio Code untuk .ngpk & .nview
+│       ├── package.json
+│       ├── language-configuration-ngpk.json
+│       ├── language-configuration-nview.json
+│       ├── syntaxes/
+│       │   ├── ngapak.tmLanguage.json
+│       │   └── nview.tmLanguage.json
+│       └── snippets/
+│           ├── ngapak.json
+│           └── nview.json
 ├── cmd/
 │   └── larapak/               # Binary CLI & Project Scaffolder
 │       └── main.go

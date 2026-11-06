@@ -1,0 +1,96 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Sawangan Template",
+  "scopeName": "text.html.nview",
+  "patterns": [
+    {
+      "include": "#directives"
+    },
+    {
+      "include": "#interpolations"
+    },
+    {
+      "include": "text.html.basic"
+    }
+  ],
+  "repository": {
+    "directives": {
+      "patterns": [
+        {
+          "name": "keyword.control.directive.layout.nview",
+          "match": "(@layout)\\s*\\([\"']([^\"']+)[\"']\\)",
+          "captures": {
+            "1": { "name": "keyword.control.directive.nview" },
+            "2": { "name": "string.quoted.double.nview" }
+          }
+        },
+        {
+          "name": "keyword.control.directive.section.nview",
+          "match": "(@section)\\s*\\([\"']([^\"']+)[\"']\\)",
+          "captures": {
+            "1": { "name": "keyword.control.directive.nview" },
+            "2": { "name": "string.quoted.double.nview" }
+          }
+        },
+        {
+          "name": "keyword.control.directive.yield.nview",
+          "match": "(@yield)\\s*\\([\"']([^\"']+)[\"']\\)",
+          "captures": {
+            "1": { "name": "keyword.control.directive.nview" },
+            "2": { "name": "string.quoted.double.nview" }
+          }
+        },
+        {
+          "name": "keyword.control.directive.include.nview",
+          "match": "(@include)\\s*\\([\"']([^\"']+)[\"']\\)",
+          "captures": {
+            "1": { "name": "keyword.control.directive.nview" },
+            "2": { "name": "string.quoted.double.nview" }
+          }
+        },
+        {
+          "name": "keyword.control.directive.csrf.nview",
+          "match": "\\b(@csrf|@endsection)\\b"
+        }
+      ]
+    },
+    "interpolations": {
+      "patterns": [
+        {
+          "name": "meta.interpolation.raw.nview",
+          "begin": "\\{!!",
+          "end": "!!\\}",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.interpolation.begin.nview" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.interpolation.end.nview" }
+          },
+          "patterns": [
+            {
+              "name": "variable.other.nview",
+              "match": "[a-zA-Z_][a-zA-Z0-9_]*"
+            }
+          ]
+        },
+        {
+          "name": "meta.interpolation.escaped.nview",
+          "begin": "\\{\\{",
+          "end": "\\}\\}",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.interpolation.begin.nview" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.interpolation.end.nview" }
+          },
+          "patterns": [
+            {
+              "name": "variable.other.nview",
+              "match": "[a-zA-Z_][a-zA-Z0-9_]*"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "Layout Directive": {
+    "prefix": "layout",
+    "body": [
+      "@layout(\"${1:layouts/app}\")"
+    ],
+    "description": "Sawangan @layout inheritance"
+  },
+  "Section Block": {
+    "prefix": "section",
+    "body": [
+      "@section(\"${1:konten}\")",
+      "    ${0}",
+      "@endsection"
+    ],
+    "description": "Sawangan @section ... @endsection"
+  },
+  "Yield Directive": {
+    "prefix": "yield",
+    "body": [
+      "@yield(\"${1:konten}\")"
+    ],
+    "description": "Sawangan @yield placeholder"
+  },
+  "CSRF Hidden Token": {
+    "prefix": "csrf",
+    "body": [
+      "@csrf"
+    ],
+    "description": "Generate @csrf token input tag"
+  },
+  "Escaped Variable": {
+    "prefix": "var",
+    "body": [
+      "{{ ${1:variable} }}"
+    ],
+    "description": "Interpolasi variabel aman {{ var }}"
+  },
+  "Raw HTML Variable": {
+    "prefix": "raw",
+    "body": [
+      "{!! ${1:rawHtml} !!}"
+    ],
+    "description": "Interpolasi variabel HTML mentah {!! raw !!}"
+  }
+}

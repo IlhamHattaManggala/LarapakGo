@@ -1,0 +1,68 @@
+{
+  "Route GET": {
+    "prefix": "rute:get",
+    "body": [
+      "rute.get(\"${1:/}\", gawe(req, res)",
+      "    balekna ${2:res.view(\"index\", [\"judul\": \"LarapakGo\"])}",
+      "rampung)"
+    ],
+    "description": "Ngawe rute HTTP GET neng NgapakIn"
+  },
+  "Route POST": {
+    "prefix": "rute:post",
+    "body": [
+      "rute.post(\"${1:/api/simpen}\", gawe(req, res)",
+      "    balekna ${2:res.json([\"status\": \"sukses\"])}",
+      "rampung)"
+    ],
+    "description": "Ngawe rute HTTP POST neng NgapakIn"
+  },
+  "Fungsi Gawe": {
+    "prefix": "gawe",
+    "body": [
+      "gawe ${1:jenengFungsi}(${2:param})",
+      "    ${0}",
+      "    balekna ${3:bener}",
+      "rampung"
+    ],
+    "description": "Deklarasi fungsi NgapakIn"
+  },
+  "Kondisi Nek": {
+    "prefix": "nek",
+    "body": [
+      "nek ${1:kondisi} ya",
+      "    ${0}",
+      "rampung"
+    ],
+    "description": "Blok percabangan nek ... ya"
+  },
+  "Kondisi Nek Liyane": {
+    "prefix": "nek:liyane",
+    "body": [
+      "nek ${1:kondisi} ya",
+      "    ${2}",
+      "liyane",
+      "    ${0}",
+      "rampung"
+    ],
+    "description": "Blok percabangan nek ... ya ... liyane"
+  },
+  "Perulangan Baleni Range": {
+    "prefix": "baleni:range",
+    "body": [
+      "baleni ${1:i} saka ${2:1} nganti ${3:10}",
+      "    ${0}",
+      "rampung"
+    ],
+    "description": "Perulangan baleni saka ... nganti"
+  },
+  "Perulangan Baleni Koleksi": {
+    "prefix": "baleni:neng",
+    "body": [
+      "baleni ${1:item} neng ${2:daftar}",
+      "    ${0}",
+      "rampung"
+    ],
+    "description": "Perulangan baleni ... neng koleksi"
+  }
+}

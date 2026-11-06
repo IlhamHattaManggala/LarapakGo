@@ -1,0 +1,75 @@
+{
+  "name": "larapak-vscode",
+  "displayName": "Larapak & NgapakIn Language Support",
+  "description": "Syntax highlighting, snippets, and language support for NgapakIn (.ngpk) scripts and Sawangan (.nview) templates in LarapakGo.",
+  "version": "1.2.2",
+  "publisher": "IlhamHattaManggala",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IlhamHattaManggala/LarapakGo.git"
+  },
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "keywords": [
+    "ngapak",
+    "larapak",
+    "golang",
+    "nview",
+    "sawangan",
+    "template"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "ngapak",
+        "aliases": [
+          "NgapakIn",
+          "ngapak",
+          "ngpk"
+        ],
+        "extensions": [
+          ".ngpk"
+        ],
+        "configuration": "./language-configuration-ngpk.json"
+      },
+      {
+        "id": "nview",
+        "aliases": [
+          "Sawangan",
+          "nview"
+        ],
+        "extensions": [
+          ".nview"
+        ],
+        "configuration": "./language-configuration-nview.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ngapak",
+        "scopeName": "source.ngpk",
+        "path": "./syntaxes/ngapak.tmLanguage.json"
+      },
+      {
+        "language": "nview",
+        "scopeName": "text.html.nview",
+        "path": "./syntaxes/nview.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "ngapak",
+        "path": "./snippets/ngapak.json"
+      },
+      {
+        "language": "nview",
+        "path": "./snippets/nview.json"
+      }
+    ]
+  }
+}
