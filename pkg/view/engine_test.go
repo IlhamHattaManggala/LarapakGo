@@ -11,7 +11,7 @@ func TestEngineRenderString(t *testing.T) {
 	engine := New("")
 
 	tmpl := `<div class="card">
-    <h1>Sugeng Rawuh {{ name }}</h1>
+    <h1>Selamat Teka {{ name }}</h1>
     <p>{!! rawHtml !!}</p>
     <form method="POST">
         @csrf

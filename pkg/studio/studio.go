@@ -127,7 +127,7 @@ func (s *Studio) GenerateOpenAPI() map[string]any {
 		"info": map[string]any{
 			"title":       fmt.Sprintf("%s - OpenAPI 3.0", s.AppName),
 			"version":     s.Version,
-			"description": "Dokumentasi API interaktif sing digawe kanthi otomatis dening LarapakGo Route & API Studio.",
+			"description": "Dokumentasi API interaktif sing digawe otomatis dening LarapakGo Route & API Studio.",
 		},
 		"servers": []map[string]any{
 			{"url": s.BaseURL, "description": fmt.Sprintf("Server Lingkungan %s", s.AppEnv)},
@@ -276,8 +276,8 @@ func (s *Studio) RenderHTML() string {
                     <div class="panel-body">
                         <div class="empty-state">
                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
-                            <div style="font-weight: 500; color: var(--text-primary); font-size: 14px;">Pilih Rute &amp; Kirim Permintaan</div>
-                            <div style="font-size: 12px; max-width: 320px;">Klik tombol Kirim Permintaan ing ndhuwur kanggo ndeleng respons live data utawa tampilan HTML.</div>
+                            <div style="font-weight: 500; color: var(--text-primary); font-size: 14px;">Pilih Rute &amp; Kirim Request</div>
+                            <div style="font-size: 12px; max-width: 320px;">Klik tombol Kirim Request neng ndhuwur nggo ndeleng respons live data utawa tampilan HTML.</div>
                         </div>
                     </div>
                 </div>
@@ -318,7 +318,7 @@ func (s *Studio) RenderHTML() string {
             renderRoutes(filtered);
         }
         function sendReq() {
-            alert('Mengirim permintaan menyang rute: ' + document.getElementById('curUrl').value);
+            alert('Ngirim request maring rute: ' + document.getElementById('curUrl').value);
         }
         renderRoutes(routes);
     </script>

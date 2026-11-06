@@ -105,7 +105,7 @@ func main() {
 	app := larapak.New()
 
 	app.GET("/", func(c *larapak.Context) error {
-		return c.String(http.StatusOK, "Sugeng Rawuh ing LarapakGo!")
+		return c.String(http.StatusOK, "Selamat Teka neng LarapakGo!")
 	})
 
 	app.Group("/api", func(r *larapak.Router) {

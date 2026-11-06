@@ -11,7 +11,7 @@ func TestRouterAndContext(t *testing.T) {
 	app := New()
 
 	app.GET("/", func(c *Context) error {
-		return c.String(http.StatusOK, "Sugeng Rawuh ing LarapakGo!")
+		return c.String(http.StatusOK, "Selamat Teka neng LarapakGo!")
 	})
 
 	app.GET("/users/:id", func(c *Context) error {
@@ -38,7 +38,7 @@ func TestRouterAndContext(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200 OK, got %d", w.Code)
 	}
-	if w.Body.String() != "Sugeng Rawuh ing LarapakGo!" {
+	if w.Body.String() != "Selamat Teka neng LarapakGo!" {
 		t.Fatalf("unexpected body: %s", w.Body.String())
 	}
 

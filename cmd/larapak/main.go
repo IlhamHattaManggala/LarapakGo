@@ -52,7 +52,7 @@ func main() {
 	case "anyar":
 		projName, lang := parseProjectArgs(args, "ngapak")
 		if projName == "" {
-			fmt.Println("Kleru: Tulung wenehi jeneng proyek. Tuladha: larapak anyar warung_app [--bahasa=ngapak|indonesia|english]")
+			fmt.Println("Kliru: Tulung wei jeneng proyek ndisit. Contohe: larapak anyar warung_app [--bahasa=ngapak|indonesia|english]")
 			os.Exit(1)
 		}
 		createNewProject(projName, lang)
@@ -67,7 +67,7 @@ func main() {
 
 	case "run", "mlakukna", "eksekusi":
 		if len(args) < 1 {
-			fmt.Println("Kleru: Diharapkan path berkas .ngpk. Tuladha: larapak mlakukna skrip.ngpk")
+			fmt.Println("Kliru: Kudune ana path berkas .ngpk. Contohe: larapak mlakukna skrip.ngpk")
 			os.Exit(1)
 		}
 		runNgapakScript(args[0])
@@ -80,42 +80,42 @@ func main() {
 	// =========================================================================
 	case "make:controller", "gawe:pangatur", "gawe:controller":
 		if len(args) < 1 {
-			fmt.Println("Kleru: Wenehi jeneng controller. Tuladha: larapak gawe:pangatur UserController")
+			fmt.Println("Kliru: Wei jeneng controller ndisit. Contohe: larapak gawe:pangatur UserController")
 			os.Exit(1)
 		}
 		createController(args[0])
 
 	case "make:model", "gawe:wujud", "gawe:model":
 		if len(args) < 1 {
-			fmt.Println("Kleru: Wenehi jeneng model. Tuladha: larapak gawe:wujud Produk")
+			fmt.Println("Kliru: Wei jeneng model ndisit. Contohe: larapak gawe:wujud Produk")
 			os.Exit(1)
 		}
 		createModel(args[0])
 
 	case "make:middleware", "gawe:pencegat", "gawe:middleware":
 		if len(args) < 1 {
-			fmt.Println("Kleru: Wenehi jeneng middleware. Tuladha: larapak gawe:pencegat AuthMiddleware")
+			fmt.Println("Kliru: Wei jeneng middleware ndisit. Contohe: larapak gawe:pencegat AuthMiddleware")
 			os.Exit(1)
 		}
 		createMiddleware(args[0])
 
 	case "make:job", "gawe:gawean", "gawe:job":
 		if len(args) < 1 {
-			fmt.Println("Kleru: Wenehi jeneng job. Tuladha: larapak gawe:gawean KirimEmailJob")
+			fmt.Println("Kliru: Wei jeneng job ndisit. Contohe: larapak gawe:gawean KirimEmailJob")
 			os.Exit(1)
 		}
 		createJob(args[0])
 
 	case "make:seeder", "gawe:bibit", "gawe:seeder":
 		if len(args) < 1 {
-			fmt.Println("Kleru: Wenehi jeneng seeder. Tuladha: larapak gawe:bibit UserSeeder")
+			fmt.Println("Kliru: Wei jeneng seeder ndisit. Contohe: larapak gawe:bibit UserSeeder")
 			os.Exit(1)
 		}
 		createSeeder(args[0])
 
 	case "make:migration", "gawe:migrasi":
 		if len(args) < 1 {
-			fmt.Println("Kleru: Wenehi jeneng migrasi. Tuladha: larapak gawe:migrasi create_users_table")
+			fmt.Println("Kliru: Wei jeneng migrasi ndisit. Contohe: larapak gawe:migrasi create_users_table")
 			os.Exit(1)
 		}
 		createMigration(args[0])
@@ -133,7 +133,7 @@ func main() {
 		showMigrationStatus()
 
 	case "rollback", "mudhun", "migrasi:mundur":
-		fmt.Println("✓ Rollback migrasi database kasil dilakoni.")
+		fmt.Println("✓ Rollback migrasi database sukses dilakoni.")
 
 	case "db:seed", "bibiti", "lumbung:bibit":
 		runSeeders()
@@ -152,21 +152,21 @@ func main() {
 		if len(args) > 0 {
 			pkgName = args[0]
 		}
-		fmt.Printf("✓ Paket '%s' kasil dipasang menyang proyek LarapakGo.\n", pkgName)
+		fmt.Printf("✓ Paket '%s' sukses dipasang maring proyek LarapakGo.\n", pkgName)
 
 	case "css:build", "rikat:rakit", "rikat:bangun":
 		p := paths.GetPaths(".")
-		fmt.Printf("✓ Rikat CSS JIT: Berhasil ngrakit berkas CSS menyang %s/rikat.css.\n", filepath.ToSlash(p.PublicCSS))
+		fmt.Printf("✓ Rikat CSS JIT: Sukses ngrakit berkas CSS maring %s/rikat.css.\n", filepath.ToSlash(p.PublicCSS))
 
 	case "css:watch", "rikat:pantau":
 		p := paths.GetPaths(".")
-		fmt.Printf("[Rikat CSS] Pantau aktif: Memantau perubahan template ing %s... [Pencet Ctrl+C kanggo mandheg]\n", filepath.ToSlash(p.Views))
+		fmt.Printf("[Rikat CSS] Pantau aktif: Mantau owahan template neng %s... [Pencet Ctrl+C nggo mandeg]\n", filepath.ToSlash(p.Views))
 
 	case "test", "coba":
 		runTests()
 
 	default:
-		fmt.Printf("Perintah '%s' ora dimangerteni. Ketik 'larapak tulung' kanggo ndeleng panduan lengkap.\n", command)
+		fmt.Printf("Perintah '%s' ora dingerteni. Ketik 'larapak tulung' nggo ndeleng panduan lengkap.\n", command)
 		os.Exit(1)
 	}
 }
@@ -225,9 +225,9 @@ Perintah Dialek Ngapak (Asli):
   larapak gawean:tandang                        (Jalankna queue worker)
   larapak resik:cache                           (Resiki cache sistem)
   larapak rikat:rakit                           (Kompilasi Rikat CSS JIT)
-  larapak coba                                  (Jalankna seluruh test suite)
-  larapak mlakukna <berkas.ngpk>                (Jalankna skrip bahasa NgapakIn)
-  larapak tulung                                (Ndeleng panduan iki)
+  larapak coba                                  (Jalankna kabeh test suite)
+  larapak mlakukna <berkas.ngpk>                (Jalankna skrip basa NgapakIn)
+  larapak tulung                                (Ndeleng panduan kiye)
 
 Perintah Standar (Laravel Artisan Style):
   larapak new, serve, route:list, make:controller, make:model, make:migration,
@@ -244,12 +244,12 @@ func runNgapakScript(filePath string) {
 	eng.BindRoutes(app)
 	_, err := eng.RunFile(filePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Kleru nalika njalankake %s: %v\n", filePath, err)
+		fmt.Fprintf(os.Stderr, "Kliru pas njalankna %s: %v\n", filePath, err)
 		os.Exit(1)
 	}
 	routes := app.Routes()
 	if len(routes) > 0 {
-		fmt.Printf("✓ Kasil ngunggah lan validasi %d rute saka %s\n", len(routes), filepath.ToSlash(filePath))
+		fmt.Printf("✓ Sukses ngunggah lan mriksa %d rute saka %s\n", len(routes), filepath.ToSlash(filePath))
 	}
 }
 
@@ -257,7 +257,7 @@ func serveDemoApp(port string) {
 	app := larapak.New()
 	st := studio.New("LarapakGo Application", version, "local", "http://localhost:"+port)
 
-	// Auto-detect and mount .ngpk routes if present in project
+	// Auto-detect lan pasang rute .ngpk nek ana neng proyek
 	p := paths.GetPaths(".")
 	ngpkRouteFile := filepath.Join(p.Routes, "web.ngpk")
 	hasNgpkRoutes := false
@@ -267,11 +267,11 @@ func serveDemoApp(port string) {
 		ngpkEng.BindRoutesWithStudio(app, st)
 		if _, err := ngpkEng.RunFile(ngpkRouteFile); err == nil {
 			hasNgpkRoutes = true
-			fmt.Printf("[Rute] Kasil ngunggah rute Ngapak saka %s\n", filepath.ToSlash(ngpkRouteFile))
+			fmt.Printf("[Rute] Sukses ngunggah rute Ngapak saka %s\n", filepath.ToSlash(ngpkRouteFile))
 		}
 	}
 
-	// 1. Welcome Page (mung yen durung didaftarake dening web.ngpk)
+	// 1. Kaca Pembuka (mung nek durung didaftarna neng web.ngpk)
 	if !hasNgpkRoutes {
 		app.GET("/", func(c *larapak.Context) error {
 			return c.HTML(http.StatusOK, `<!DOCTYPE html>
@@ -279,7 +279,7 @@ func serveDemoApp(port string) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sugeng Rawuh ing LarapakGo</title>
+    <title>Selamat Teka neng LarapakGo</title>
     <style>
         :root {
             --bg-base: #0B0C10;
@@ -312,7 +312,7 @@ func serveDemoApp(port string) {
             100% Go Standard Library
         </div>
         <h1>LarapakGo</h1>
-        <p>Framework Web MVC Modern Berbasis Bahasa Go &amp; Dialek Ngapak.<br>Ora Ngapak Ora Kepenak!</p>
+        <p>Framework Web MVC Modern Berbasis Basa Go &amp; Dialek Ngapak Tegalan.<br>Ora Ngapak Ora Kepenak!</p>
         
         <div class="btn-group">
             <a href="/_studio" class="btn btn-primary">Buka Route Studio &rarr;</a>
@@ -368,9 +368,9 @@ func serveDemoApp(port string) {
 		return nil
 	})
 
-	fmt.Printf("\nRoute & API Studio aktif ing: http://localhost:%s/_studio\n", port)
+	fmt.Printf("\nRoute & API Studio aktif neng: http://localhost:%s/_studio\n", port)
 	if err := app.Run(":" + port); err != nil {
-		fmt.Fprintf(os.Stderr, "Kleru nalika nguripake server: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Kliru pas nguripna server: %v\n", err)
 		os.Exit(1)
 	}
 }
@@ -400,7 +400,7 @@ func showRouteList() {
 | GET    | /_studio               | StudioController@Index   |
 | GET    | /_studio/openapi.json  | StudioController@OpenAPI |
 +--------+------------------------+--------------------------+
-Total Rute: 6 rute kadaptar.
+Total Rute: 6 rute kadaftar.
 `)
 		return
 	}
@@ -412,13 +412,13 @@ Total Rute: 6 rute kadaptar.
 		fmt.Printf("| %-6s | %-30s | %-24s |\n", r.Method, r.Pattern, "NgapakIn Handler")
 	}
 	fmt.Println("+--------+--------------------------------+--------------------------+")
-	fmt.Printf("Total Rute: %d rute kadaptar ing %s\n\n", len(routes), filepath.ToSlash(ngpkRouteFile))
+	fmt.Printf("Total Rute: %d rute kadaftar neng %s\n\n", len(routes), filepath.ToSlash(ngpkRouteFile))
 }
 
 func createNewProject(name, lang string) {
 	lang = paths.NormalizeLanguage(lang)
 	langTitles := map[string]string{
-		"ngapak":    "dialek Ngapak",
+		"ngapak":    "dialek Ngapak Tegalan",
 		"indonesia": "Bahasa Indonesia",
 		"english":   "English standard",
 	}
@@ -427,7 +427,7 @@ func createNewProject(name, lang string) {
 	if title == "" {
 		title = lang
 	}
-	fmt.Printf("Nggawe proyek LarapakGo anyar ing folder: '%s' [Basa: %s]...\n", name, title)
+	fmt.Printf("Nggawe proyek LarapakGo anyar neng folder: '%s' [Basa: %s]...\n", name, title)
 
 	p := paths.Config[lang].InDir(name)
 	dirs := []string{
@@ -480,10 +480,10 @@ replace github.com/IlhamHattaManggala/larapak-go => %s
 	ctrlPkg := paths.PackageName(paths.Config[lang].Controllers)
 	modelPkg := paths.PackageName(paths.Config[lang].Models)
 
-	welcomeGreeting := "Sugeng Rawuh ing Proyek LarapakGo!"
+	welcomeGreeting := "Selamat Teka neng Proyek LarapakGo!"
 	statusMsg := "Ora Ngapak Ora Kepenak"
-	readmeDesc := "Proyek aplikasi web LarapakGo sing digawe nganggo struktur dialek Ngapak."
-	stepText := "Langkah sabanjure:"
+	readmeDesc := "Proyek aplikasi web LarapakGo sing digawe nganggo struktur dialek Ngapak Tegalan."
+	stepText := "Langkah sateruse:"
 	if lang == "indonesia" {
 		welcomeGreeting = "Selamat Datang di Proyek LarapakGo!"
 		statusMsg = "Aplikasi Berjalan Lancar"
@@ -522,13 +522,13 @@ func main() {
 	ngpkEng := ngapak.NewEngine(".", vEngine)
 	ngpkEng.BindRoutesWithStudio(app, st)
 
-	// Muat rute .ngpk yen ana
+	// Muat rute .ngpk nek ana
 	ngpkRouteFile := filepath.Join(p.Routes, "web.ngpk")
 	hasNgpkRoutes := false
 	if _, err := os.Stat(ngpkRouteFile); err == nil {
 		if _, err := ngpkEng.RunFile(ngpkRouteFile); err == nil {
 			hasNgpkRoutes = true
-			fmt.Printf("[Rute] Kasil ngunggah rute Ngapak saka %%s\n", filepath.ToSlash(ngpkRouteFile))
+			fmt.Printf("[Rute] Sukses ngunggah rute Ngapak saka %%s\n", filepath.ToSlash(ngpkRouteFile))
 		}
 	}
 
@@ -559,10 +559,10 @@ func main() {
 		return nil
 	})
 
-	fmt.Println("\nAplikasi LarapakGo mlaku ing: http://localhost:8080")
-	fmt.Println("Route & API Studio aktif ing : http://localhost:8080/_studio\n")
+	fmt.Println("\nAplikasi LarapakGo mlaku neng: http://localhost:8080")
+	fmt.Println("Route & API Studio aktif neng : http://localhost:8080/_studio\n")
 	if err := app.Run(":8080"); err != nil {
-		fmt.Fprintf(os.Stderr, "Kleru: %%v\n", err)
+		fmt.Fprintf(os.Stderr, "Kliru: %%v\n", err)
 	}
 }
 `, name, ctrlRelPath, name, ctrlPkg, statusMsg, lang, name)
@@ -756,8 +756,8 @@ Route & API Studio: http://localhost:8080/_studio
 	_ = tidyCmd.Run()
 
 	fmt.Printf(`
-✓ Proyek '%s' kasil digawe kanthi resik tanpa sampah engine! [Basa: %s]
-  Struktur Direktori:
+✓ Proyek '%s' sukses digawe sing resik laka sampah engine! [Basa: %s]
+  Struktur Folder:
     - Controllers : %s
     - Models      : %s
     - Views       : %s
@@ -793,7 +793,7 @@ type %s struct{}
 
 func (ctl *%s) Index(c *larapak.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{
-		"message": "Sugeng rawuh ing %s",
+		"message": "Halo Sedulur! Selamat teka neng %s",
 	})
 }
 `, pkgName, name, name, name)
@@ -803,7 +803,7 @@ func (ctl *%s) Index(c *larapak.Context) error {
 		fmt.Printf("Gagal nggawe controller: %v\n", err)
 		return
 	}
-	fmt.Printf("✓ Controller kasil digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
+	fmt.Printf("✓ Controller sukses digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
 }
 
 func createModel(name string) {
@@ -832,7 +832,7 @@ func (m *%s) TableName() string {
 		fmt.Printf("Gagal nggawe model: %v\n", err)
 		return
 	}
-	fmt.Printf("✓ Model kasil digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
+	fmt.Printf("✓ Model sukses digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
 }
 
 func createMiddleware(name string) {
@@ -862,7 +862,7 @@ func %s() larapak.MiddlewareFunc {
 		fmt.Printf("Gagal nggawe middleware: %v\n", err)
 		return
 	}
-	fmt.Printf("✓ Middleware kasil digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
+	fmt.Printf("✓ Middleware sukses digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
 }
 
 func createJob(name string) {
@@ -880,7 +880,7 @@ type %s struct {
 }
 
 func (j *%s) Handle() error {
-	log.Printf("[Job %s] Sedang diproses kanthi payload: %%v", j.Payload)
+	log.Printf("[Job %s] Lagi diproses nganggo payload: %%v", j.Payload)
 	return nil
 }
 `, pkgName, name, name, name)
@@ -890,7 +890,7 @@ func (j *%s) Handle() error {
 		fmt.Printf("Gagal nggawe job: %v\n", err)
 		return
 	}
-	fmt.Printf("✓ Job antrean kasil digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
+	fmt.Printf("✓ Job antrean sukses digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
 }
 
 func createSeeder(name string) {
@@ -909,7 +909,7 @@ import (
 type %s struct{}
 
 func (s *%s) Run(db *sql.DB) error {
-	log.Println("[Seeder %s] Membibiti database...")
+	log.Println("[Seeder %s] Ngisi bibit database...")
 	return nil
 }
 `, pkgName, name, name, name)
@@ -919,7 +919,7 @@ func (s *%s) Run(db *sql.DB) error {
 		fmt.Printf("Gagal nggawe seeder: %v\n", err)
 		return
 	}
-	fmt.Printf("✓ Database Seeder kasil digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
+	fmt.Printf("✓ Database Seeder sukses digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
 }
 
 func createMigration(name string) {
@@ -945,28 +945,28 @@ CREATE TABLE IF NOT EXISTS %s (
 		fmt.Printf("Gagal nggawe berkas migrasi: %v\n", err)
 		return
 	}
-	fmt.Printf("✓ Migrasi kasil digawe: %s\n", filepath.ToSlash(filePath))
+	fmt.Printf("✓ Migrasi sukses digawe: %s\n", filepath.ToSlash(filePath))
 }
 
 func runMigrations() {
 	p := paths.GetPaths(".")
 	dir := p.Migrations
-	fmt.Printf("Munggah: Menjalankan migrasi database ing '%s'...\n", filepath.ToSlash(dir))
+	fmt.Printf("Munggah: Njalankna migrasi database neng '%s'...\n", filepath.ToSlash(dir))
 	entries, err := os.ReadDir(dir)
 	if err != nil || len(entries) == 0 {
-		fmt.Printf("Ora ana berkas migrasi sing ditemokake ing %s.\n", filepath.ToSlash(dir))
+		fmt.Printf("Laka berkas migrasi sing ditemokna neng %s.\n", filepath.ToSlash(dir))
 		return
 	}
 	for _, e := range entries {
-		fmt.Printf("  ✓ Migrasi: %s [KASIL]\n", e.Name())
+		fmt.Printf("  ✓ Migrasi: %s [SUKSES]\n", e.Name())
 	}
-	fmt.Println("Kabeh migrasi kasil dilakoni.")
+	fmt.Println("Kabeh migrasi sukses dilakoni.")
 }
 
 func runMigrationsFresh() {
 	p := paths.GetPaths(".")
 	dir := p.Migrations
-	fmt.Printf("[Peringatan] Mbusak kabeh tabel lan ngulang migrasi saka awal ing '%s'...\n", filepath.ToSlash(dir))
+	fmt.Printf("[Pèngetan] Mbusak kabeh tabel lan ngulang migrasi saka awal neng '%s'...\n", filepath.ToSlash(dir))
 	runMigrations()
 }
 
@@ -983,12 +983,12 @@ func showMigrationStatus() {
 
 func runSeeders() {
 	p := paths.GetPaths(".")
-	fmt.Printf("Membibiti data awal menyang database saka '%s'...\n", filepath.ToSlash(p.Seeders))
-	fmt.Println("✓ DatabaseSeeder kasil dieksekusi.")
+	fmt.Printf("Ngisi bibit data awal maring database saka '%s'...\n", filepath.ToSlash(p.Seeders))
+	fmt.Println("✓ DatabaseSeeder sukses dieksekusi.")
 }
 
 func runQueueWorker() {
-	fmt.Println("Queue Worker aktif... [Pencet Ctrl+C kanggo mandheg]")
+	fmt.Println("Queue Worker aktif... [Pencet Ctrl+C nggo mandheg]")
 	q := queue.NewMemoryQueue()
 	stopCh := make(chan struct{})
 	q.Work(stopCh)
@@ -996,11 +996,11 @@ func runQueueWorker() {
 
 func clearCache() {
 	_ = cache.ClearStorageCache("storage/cache")
-	fmt.Println("✓ Cache sistem kasil diresiki kabeh.")
+	fmt.Println("✓ Cache sistem sukses diresiki kabeh.")
 }
 
 func runTests() {
-	fmt.Println("Menjalankan test suite LarapakGo...")
+	fmt.Println("Njalankna test suite LarapakGo...")
 	cmd := exec.Command("go", "test", "-v", "./...")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

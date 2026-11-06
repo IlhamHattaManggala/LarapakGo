@@ -149,8 +149,8 @@ func TestBridgeRouteWithNgapakAndNview(t *testing.T) {
 	// 1. Create a sample .nview template
 	viewsDir := filepath.Join(tmpDir, "sawangan")
 	_ = os.MkdirAll(viewsDir, 0755)
-	tplContent := `<h1>Sugeng Rawuh {{ nama }}</h1>`
-	_ = os.WriteFile(filepath.Join(viewsDir, "sugeng.nview"), []byte(tplContent), 0644)
+	tplContent := `<h1>Selamat Teka {{ nama }}</h1>`
+	_ = os.WriteFile(filepath.Join(viewsDir, "salam.nview"), []byte(tplContent), 0644)
 
 	// 2. Setup Larapak App & Ngapak Engine
 	app := larapak.New()
@@ -160,8 +160,8 @@ func TestBridgeRouteWithNgapakAndNview(t *testing.T) {
 
 	// 3. Run a .ngpk script that registers routes
 	routeScript := `
-rute.get("/sugeng", gawe(req, res)
-    balekna res.view("sugeng", ["nama": "Slamet"])
+rute.get("/salam", gawe(req, res)
+    balekna res.view("salam", ["nama": "Slamet"])
 rampung)
 
 rute.get("/api/info", gawe(req, res)
@@ -173,15 +173,15 @@ rampung)
 		t.Fatalf("RunSource failed: %v", err)
 	}
 
-	// 4. Test GET /sugeng (HTML template from .nview)
-	req := httptest.NewRequest("GET", "/sugeng", nil)
+	// 4. Test GET /salam (HTML template from .nview)
+	req := httptest.NewRequest("GET", "/salam", nil)
 	w := httptest.NewRecorder()
 	app.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d", w.Code)
 	}
-	if !strings.Contains(w.Body.String(), "Sugeng Rawuh Slamet") {
+	if !strings.Contains(w.Body.String(), "Selamat Teka Slamet") {
 		t.Errorf("unexpected body: %s", w.Body.String())
 	}
 

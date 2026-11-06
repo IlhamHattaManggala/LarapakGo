@@ -90,7 +90,7 @@ func (eng *Engine) BindRoutesWithStudio(app *larapak.App, st *studio.Studio) {
 
 func (eng *Engine) registerRoute(app *larapak.App, st *studio.Studio, method string, args []any) (any, error) {
 	if len(args) < 2 {
-		return nil, fmt.Errorf("rute.%s mbutuhake path lan handler", strings.ToLower(method))
+		return nil, fmt.Errorf("rute.%s mbutuhna path karo handler", strings.ToLower(method))
 	}
 
 	path := fmt.Sprintf("%v", args[0])
@@ -136,7 +136,7 @@ func (eng *Engine) registerRoute(app *larapak.App, st *studio.Studio, method str
 			}
 		}
 
-		return fmt.Errorf("aksi rute ora dimangerteni: %v", action)
+		return fmt.Errorf("aksi rute ora dingerteni: %v", action)
 	}
 
 	switch method {
@@ -180,7 +180,7 @@ func (eng *Engine) createContextBridge(c *larapak.Context) (map[string]any, map[
 	res = map[string]any{
 		"view": func(args []any) (any, error) {
 			if len(args) == 0 {
-				return nil, fmt.Errorf("res.view mbutuhake jeneng view")
+				return nil, fmt.Errorf("res.view mbutuhna jeneng view")
 			}
 			viewName := fmt.Sprintf("%v", args[0])
 			data := make(map[string]any)
@@ -243,7 +243,7 @@ func (eng *Engine) invokeControllerMethod(ctrlName, methodName string, req, res 
 	}
 
 	if foundPath == "" {
-		return fmt.Errorf("berkas controller %s.ngpk ora ditemokake ing direktori controllers", ctrlName)
+		return fmt.Errorf("berkas controller %s.ngpk ora ditemokna neng folder controllers", ctrlName)
 	}
 
 	// Execute controller file in an isolated environment that inherits Globals
@@ -273,7 +273,7 @@ func (eng *Engine) invokeControllerMethod(ctrlName, methodName string, req, res 
 	// Look up methodName
 	fnVal, ok := ctrlEnv.Get(methodName)
 	if !ok {
-		return fmt.Errorf("metode %q ora ditemokake ing %s.ngpk", methodName, ctrlName)
+		return fmt.Errorf("metode %q ora ditemokna neng %s.ngpk", methodName, ctrlName)
 	}
 
 	_, err = eng.Evaluator.CallCallable(fnVal, []any{req, res})

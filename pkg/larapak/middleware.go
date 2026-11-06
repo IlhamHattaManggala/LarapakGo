@@ -36,7 +36,7 @@ func Recover() MiddlewareFunc {
 					log.Printf("[LarapakGo PANIC] %v\n%s", r, string(debug.Stack()))
 					c.JSON(http.StatusInternalServerError, map[string]any{
 						"error":   "Internal Server Error",
-						"message": fmt.Sprintf("Kleru server internal: %v", r),
+						"message": fmt.Sprintf("Kliru server internal: %v", r),
 						"status":  http.StatusInternalServerError,
 					})
 				}

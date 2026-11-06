@@ -29,7 +29,7 @@ func NewRouter() *Router {
 		notFound: func(c *Context) error {
 			return c.JSON(http.StatusNotFound, map[string]any{
 				"error":   "Not Found",
-				"message": "Rute ora ditemokake: " + c.Path(),
+				"message": "Rute ora ditemokna: " + c.Path(),
 				"status":  http.StatusNotFound,
 			})
 		},

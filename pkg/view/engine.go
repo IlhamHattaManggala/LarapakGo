@@ -27,7 +27,7 @@ func (e *Engine) RenderTemplate(viewName string, data map[string]any) (string, e
 	filePath := e.resolveViewPath(viewName)
 	rawBytes, err := os.ReadFile(filePath)
 	if err != nil {
-		return "", fmt.Errorf("cithakan ora ditemokake: %s (%w)", filePath, err)
+		return "", fmt.Errorf("cithakan ora ditemokna: %s (%w)", filePath, err)
 	}
 
 	content := string(rawBytes)

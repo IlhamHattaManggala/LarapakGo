@@ -16,7 +16,7 @@ func TestSessionManager(t *testing.T) {
 
 	sess1 := mgr.Start(w1, req1)
 	sess1.Set("user_id", 101)
-	sess1.Flash("success", "Pendaftaran kasil!")
+	sess1.Flash("success", "Pendaftaran sukses!")
 
 	cookies := w1.Result().Cookies()
 	if len(cookies) == 0 || cookies[0].Name != "larapak_session" {
@@ -38,7 +38,7 @@ func TestSessionManager(t *testing.T) {
 
 	// 3. Flash message consumed
 	flash := sess2.GetFlash("success")
-	if flash != "Pendaftaran kasil!" {
+	if flash != "Pendaftaran sukses!" {
 		t.Fatalf("expected flash message, got %s", flash)
 	}
 

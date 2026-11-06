@@ -59,9 +59,9 @@ func (q *MemoryQueue) Work(stopCh <-chan struct{}) {
 				log.Println("[Queue Worker] Memproses pekerjaan...")
 				start := time.Now()
 				if err := job.Handle(); err != nil {
-					log.Printf("[Queue Worker] Pekerjaan kleru/gagal: %v", err)
+					log.Printf("[Queue Worker] Gawean kliru/gagal: %v", err)
 				} else {
-					log.Printf("[Queue Worker] Pekerjaan sukses diselesaikan (%v).", time.Since(start))
+					log.Printf("[Queue Worker] Gawean sukses diselesaikna (%v).", time.Since(start))
 				}
 			} else {
 				time.Sleep(500 * time.Millisecond)

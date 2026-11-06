@@ -74,7 +74,7 @@ func (a *App) Run(addr ...string) error {
 /_____/\__,_/_/   \__,_/ .___/\__,_/_/|_|\____/   
                       /_/                         
   LarapakGo Web Framework - Versi %s
-  Mlayu cepet ing http://localhost%s
+  Mlayu rikat neng http://localhost%s
   [Basa: Go (Golang) • 100%% Standard Library]
 `, a.Version, address)
 

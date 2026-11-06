@@ -128,7 +128,7 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 				tokens = append(tokens, Token{Type: T_NEQ, Line: startLine, Column: startCol})
 				l.advance()
 			} else {
-				return nil, fmt.Errorf("%s:%d:%d: karakter '!' kudu diterusake '=' kanggo operator ora padha (!=)", l.filename, startLine, startCol)
+				return nil, fmt.Errorf("%s:%d:%d: karakter '!' kudu diterusna '=' nggo operator ora padha (!=)", l.filename, startLine, startCol)
 			}
 		case '<':
 			l.advance()
@@ -186,7 +186,7 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 			tokens = append(tokens, Token{Type: T_COLON, Line: startLine, Column: startCol})
 			l.advance()
 		default:
-			return nil, fmt.Errorf("%s:%d:%d: karakter ora dimangerteni: %q", l.filename, startLine, startCol, l.char)
+			return nil, fmt.Errorf("%s:%d:%d: karakter ora dingerteni: %q", l.filename, startLine, startCol, l.char)
 		}
 	}
 

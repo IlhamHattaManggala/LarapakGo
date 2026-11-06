@@ -226,7 +226,7 @@ func (ev *Evaluator) executeStatement(stmt Statement, env *Environment) (any, er
 			m[s.Member] = exprVal
 			return exprVal, nil
 		}
-		return nil, fmt.Errorf("obyek ora ndhukung properti %q", s.Member)
+		return nil, fmt.Errorf("obyek ora ndukung properti %q", s.Member)
 
 	case *IndexAssignNode:
 		objVal, err := ev.evaluateExpr(s.Obj, env)
@@ -255,7 +255,7 @@ func (ev *Evaluator) executeStatement(stmt Statement, env *Environment) (any, er
 			container[idx] = exprVal
 			return exprVal, nil
 		default:
-			return nil, fmt.Errorf("tipe %T ora bisa diwenehi indeks", objVal)
+			return nil, fmt.Errorf("tipe %T ora bisa diwei indeks", objVal)
 		}
 
 	case *IfNode:
@@ -381,7 +381,7 @@ func (ev *Evaluator) executeStatement(stmt Statement, env *Environment) (any, er
 		return ev.evaluateExpr(s.Expr, env)
 
 	default:
-		return nil, fmt.Errorf("pranyatan ora dimangerteni: %T", stmt)
+		return nil, fmt.Errorf("statement ora dingerteni: %T", stmt)
 	}
 }
 
@@ -393,7 +393,7 @@ func (ev *Evaluator) evaluateExpr(expr Expression, env *Environment) (any, error
 	case *VarAccessNode:
 		val, ok := env.Get(e.Name)
 		if !ok {
-			return nil, fmt.Errorf("variabel %q durung ditepungake", e.Name)
+			return nil, fmt.Errorf("variabel %q durung ditepungna", e.Name)
 		}
 		return val, nil
 
@@ -446,7 +446,7 @@ func (ev *Evaluator) evaluateExpr(expr Expression, env *Environment) (any, error
 					return lNum + rNum, nil
 				}
 			}
-			return nil, fmt.Errorf("operasi '+' ora ndhukung tipe %T lan %T", left, right)
+			return nil, fmt.Errorf("operasi '+' ora ndukung tipe %T karo %T", left, right)
 
 		case T_MINUS:
 			lNum, ok1 := toFloat(left)
@@ -457,7 +457,7 @@ func (ev *Evaluator) evaluateExpr(expr Expression, env *Environment) (any, error
 				}
 				return lNum - rNum, nil
 			}
-			return nil, fmt.Errorf("operasi '-' mung kanggo angka")
+			return nil, fmt.Errorf("operasi '-' mung nggo angka")
 
 		case T_MUL:
 			if lStr, ok1 := left.(string); ok1 {
@@ -473,7 +473,7 @@ func (ev *Evaluator) evaluateExpr(expr Expression, env *Environment) (any, error
 				}
 				return lNum * rNum, nil
 			}
-			return nil, fmt.Errorf("operasi '*' mung kanggo angka utawa teks*angka")
+			return nil, fmt.Errorf("operasi '*' mung nggo angka utawa teks*angka")
 
 		case T_DIV:
 			lNum, ok1 := toFloat(left)
@@ -487,7 +487,7 @@ func (ev *Evaluator) evaluateExpr(expr Expression, env *Environment) (any, error
 				}
 				return lNum / rNum, nil
 			}
-			return nil, fmt.Errorf("operasi '/' mung kanggo angka")
+			return nil, fmt.Errorf("operasi '/' mung nggo angka")
 
 		case T_EQ:
 			return reflect.DeepEqual(left, right), nil
@@ -505,7 +505,7 @@ func (ev *Evaluator) evaluateExpr(expr Expression, env *Environment) (any, error
 					return lStr < rStr, nil
 				}
 			}
-			return false, fmt.Errorf("operasi '<' ora sah kanggo %T lan %T", left, right)
+			return false, fmt.Errorf("operasi '<' ora sah nggo %T karo %T", left, right)
 
 		case T_LTE:
 			lNum, ok1 := toFloat(left)
@@ -552,7 +552,7 @@ func (ev *Evaluator) evaluateExpr(expr Expression, env *Environment) (any, error
 				}
 				return -n, nil
 			}
-			return nil, fmt.Errorf("operasi '-' ora sah kanggo %T", val)
+			return nil, fmt.Errorf("operasi '-' ora sah nggo %T", val)
 		}
 
 	case *FuncDefNode:
@@ -567,7 +567,7 @@ func (ev *Evaluator) evaluateExpr(expr Expression, env *Environment) (any, error
 	case *FuncCallNode:
 		calleeVal, ok := env.Get(e.Callee)
 		if !ok {
-			return nil, fmt.Errorf("fungsi %q ora ditemokake", e.Callee)
+			return nil, fmt.Errorf("fungsi %q ora ditemokna", e.Callee)
 		}
 
 		var args []any
@@ -644,7 +644,7 @@ func (ev *Evaluator) evaluateExpr(expr Expression, env *Environment) (any, error
 			}
 			return string(container[idx]), nil
 		default:
-			return nil, fmt.Errorf("tipe %T ora ndhukung indeks", objVal)
+			return nil, fmt.Errorf("tipe %T ora ndukung indeks", objVal)
 		}
 
 	case *DictNode:
@@ -674,7 +674,7 @@ func (ev *Evaluator) evaluateExpr(expr Expression, env *Environment) (any, error
 		return list, nil
 	}
 
-	return nil, fmt.Errorf("ekspresi ora dimangerteni: %T", expr)
+	return nil, fmt.Errorf("ekspresi ora dingerteni: %T", expr)
 }
 
 // CallCallable executes a Ngapak Function or BuiltinFunc.
@@ -706,7 +706,7 @@ func (ev *Evaluator) CallCallable(callee any, args []any) (any, error) {
 		return fn(args)
 
 	default:
-		return nil, fmt.Errorf("obyek %T ora bisa diundang minangka fungsi", callee)
+		return nil, fmt.Errorf("obyek %T ora bisa diceluk dadi fungsi", callee)
 	}
 }
 
@@ -725,7 +725,7 @@ func (ev *Evaluator) reflectMember(obj any, member string) (any, error) {
 			return field.Interface(), nil
 		}
 	}
-	return nil, fmt.Errorf("properti %q ora ditemokake ing %T", member, obj)
+	return nil, fmt.Errorf("properti %q ora ditemokna neng %T", member, obj)
 }
 
 func (ev *Evaluator) reflectMethod(obj any, method string, args []any) (any, error) {
@@ -735,7 +735,7 @@ func (ev *Evaluator) reflectMethod(obj any, method string, args []any) (any, err
 		m = val.MethodByName(method)
 	}
 	if !m.IsValid() {
-		return nil, fmt.Errorf("metode %q ora ditemokake ing %T", method, obj)
+		return nil, fmt.Errorf("metode %q ora ditemokna neng %T", method, obj)
 	}
 
 	mType := m.Type()

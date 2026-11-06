@@ -51,7 +51,7 @@ func (p *Parser) consume(t TokenType, errMsg string) (Token, error) {
 		return p.advance(), nil
 	}
 	cur := p.current()
-	return Token{}, fmt.Errorf("%s:%d:%d: kleru sintaksis: %s (ditemokake: %s)", p.filename, cur.Line, cur.Column, errMsg, cur.Type)
+	return Token{}, fmt.Errorf("%s:%d:%d: kliru sintaksis: %s (ditemokna: %s)", p.filename, cur.Line, cur.Column, errMsg, cur.Type)
 }
 
 // Parse parses the whole token stream into a ProgramNode.
@@ -75,7 +75,7 @@ func (p *Parser) Parse() (*ProgramNode, error) {
 		if !p.check(T_EOF) && !p.check(T_NEWLINE) && p.pos > 0 && p.tokens[p.pos-1].Type != T_NEWLINE {
 			if !p.check(T_RAMPUNG) && !p.check(T_LIYANE) {
 				cur := p.current()
-				return nil, fmt.Errorf("%s:%d:%d: kudu ana baris anyar sawise pranyatan", p.filename, cur.Line, cur.Column)
+				return nil, fmt.Errorf("%s:%d:%d: kudu ana baris anyar sawise statement", p.filename, cur.Line, cur.Column)
 			}
 		}
 
@@ -169,7 +169,7 @@ func (p *Parser) ifStatement(startTok Token) (Statement, error) {
 		return nil, err
 	}
 
-	if _, err := p.consume(T_YA, "dikarepake tembung kunci 'ya' sawise kondisi 'nek'"); err != nil {
+	if _, err := p.consume(T_YA, "kudune ana tembung 'ya' sawise kondisi 'nek'"); err != nil {
 		return nil, err
 	}
 
@@ -206,7 +206,7 @@ func (p *Parser) ifStatement(startTok Token) (Statement, error) {
 		}
 	}
 
-	if _, err := p.consume(T_RAMPUNG, "dikarepake tembung kunci 'rampung' kanggo nutup blok 'nek'"); err != nil {
+	if _, err := p.consume(T_RAMPUNG, "kudune ana tembung 'rampung' nggo nutup blok 'nek'"); err != nil {
 		return nil, err
 	}
 
@@ -214,7 +214,7 @@ func (p *Parser) ifStatement(startTok Token) (Statement, error) {
 }
 
 func (p *Parser) forStatement(startTok Token) (Statement, error) {
-	varTok, err := p.consume(T_IDENTIFIER, "dikarepake jeneng variabel sawise 'baleni'")
+	varTok, err := p.consume(T_IDENTIFIER, "kudune ana jeneng variabel sawise 'baleni'")
 	if err != nil {
 		return nil, err
 	}
@@ -239,13 +239,13 @@ func (p *Parser) forStatement(startTok Token) (Statement, error) {
 			for p.match(T_NEWLINE) {
 			}
 		}
-		if _, err := p.consume(T_RAMPUNG, "dikarepake tembung kunci 'rampung' kanggo nutup blok 'baleni'"); err != nil {
+		if _, err := p.consume(T_RAMPUNG, "kudune ana tembung 'rampung' nggo nutup blok 'baleni'"); err != nil {
 			return nil, err
 		}
 		return &ForEachNode{VarName: varName, Collection: collExpr, Body: body, Line: startTok.Line, Col: startTok.Column}, nil
 	}
 
-	if _, err := p.consume(T_SAKA, "dikarepake tembung kunci 'saka' utawa 'neng' sawise variabel loop"); err != nil {
+	if _, err := p.consume(T_SAKA, "kudune ana tembung 'saka' utawa 'neng' sawise variabel loop"); err != nil {
 		return nil, err
 	}
 	startExpr, err := p.expression()
@@ -253,7 +253,7 @@ func (p *Parser) forStatement(startTok Token) (Statement, error) {
 		return nil, err
 	}
 
-	if _, err := p.consume(T_NGANTI, "dikarepake tembung kunci 'nganti' sawise nilai wiwitan loop"); err != nil {
+	if _, err := p.consume(T_NGANTI, "kudune ana tembung 'nganti' sawise nilai awal loop"); err != nil {
 		return nil, err
 	}
 	endExpr, err := p.expression()
@@ -277,7 +277,7 @@ func (p *Parser) forStatement(startTok Token) (Statement, error) {
 		}
 	}
 
-	if _, err := p.consume(T_RAMPUNG, "dikarepake tembung kunci 'rampung' kanggo nutup blok 'baleni'"); err != nil {
+	if _, err := p.consume(T_RAMPUNG, "kudune ana tembung 'rampung' nggo nutup blok 'baleni'"); err != nil {
 		return nil, err
 	}
 
@@ -291,19 +291,19 @@ func (p *Parser) funcDefStatement(startTok Token) (Statement, error) {
 		name = nameTok.Value.(string)
 	}
 
-	if _, err := p.consume(T_LPAREN, "dikarepake '(' sawise jeneng fungsi"); err != nil {
+	if _, err := p.consume(T_LPAREN, "kudune ana '(' sawise jeneng fungsi"); err != nil {
 		return nil, err
 	}
 
 	var params []string
 	if !p.check(T_RPAREN) {
-		paramTok, err := p.consume(T_IDENTIFIER, "dikarepake jeneng parameter")
+		paramTok, err := p.consume(T_IDENTIFIER, "kudune ana jeneng parameter")
 		if err != nil {
 			return nil, err
 		}
 		params = append(params, paramTok.Value.(string))
 		for p.match(T_COMMA) {
-			paramTok, err := p.consume(T_IDENTIFIER, "dikarepake jeneng parameter sawise koma")
+			paramTok, err := p.consume(T_IDENTIFIER, "kudune ana jeneng parameter sawise koma")
 			if err != nil {
 				return nil, err
 			}
@@ -311,7 +311,7 @@ func (p *Parser) funcDefStatement(startTok Token) (Statement, error) {
 		}
 	}
 
-	if _, err := p.consume(T_RPAREN, "dikarepake ')' sawise dhaptar parameter"); err != nil {
+	if _, err := p.consume(T_RPAREN, "kudune ana ')' sawise daftar parameter"); err != nil {
 		return nil, err
 	}
 
@@ -331,7 +331,7 @@ func (p *Parser) funcDefStatement(startTok Token) (Statement, error) {
 		}
 	}
 
-	if _, err := p.consume(T_RAMPUNG, "dikarepake tembung kunci 'rampung' kanggo nutup fungsi"); err != nil {
+	if _, err := p.consume(T_RAMPUNG, "kudune ana tembung 'rampung' nggo nutup fungsi"); err != nil {
 		return nil, err
 	}
 
@@ -450,7 +450,7 @@ func (p *Parser) primary() (Expression, error) {
 			dotTok := p.tokens[p.pos-1]
 			// Member or method identifier
 			if !p.check(T_IDENTIFIER) && !p.isKeyword(p.current().Type) {
-				return nil, fmt.Errorf("%s:%d:%d: dikarepake jeneng properti utawa metode sawise '.'", p.filename, dotTok.Line, dotTok.Column)
+				return nil, fmt.Errorf("%s:%d:%d: kudune ana jeneng properti utawa metode sawise '.'", p.filename, dotTok.Line, dotTok.Column)
 			}
 			nameTok := p.advance()
 			name := fmt.Sprintf("%v", nameTok.Value)
@@ -485,7 +485,7 @@ func (p *Parser) primary() (Expression, error) {
 				}
 				for p.match(T_NEWLINE) {
 				}
-				if _, err := p.consume(T_RPAREN, "dikarepake ')' sawise argumen metode"); err != nil {
+				if _, err := p.consume(T_RPAREN, "kudune ana ')' sawise argumen metode"); err != nil {
 					return nil, err
 				}
 				expr = &MethodCallNode{Obj: expr, Method: name, Args: args, Line: dotTok.Line, Col: dotTok.Column}
@@ -498,7 +498,7 @@ func (p *Parser) primary() (Expression, error) {
 			if err != nil {
 				return nil, err
 			}
-			if _, err := p.consume(T_RBRACKET, "dikarepake ']' sawise indeks"); err != nil {
+			if _, err := p.consume(T_RBRACKET, "kudune ana ']' sawise indeks"); err != nil {
 				return nil, err
 			}
 			expr = &IndexAccessNode{Obj: expr, Index: idxExpr, Line: bracketTok.Line, Col: bracketTok.Column}
@@ -547,7 +547,7 @@ func (p *Parser) basePrimary() (Expression, error) {
 		}
 		for p.match(T_NEWLINE) {
 		}
-		if _, err := p.consume(T_COLON, "dikarepake ':' sawise kunci kamus"); err != nil {
+		if _, err := p.consume(T_COLON, "kudune ana ':' sawise kunci map"); err != nil {
 			return nil, err
 		}
 		for p.match(T_NEWLINE) {
@@ -576,7 +576,7 @@ func (p *Parser) basePrimary() (Expression, error) {
 			}
 			for p.match(T_NEWLINE) {
 			}
-			if _, err := p.consume(T_COLON, "dikarepake ':' sawise kunci kamus"); err != nil {
+			if _, err := p.consume(T_COLON, "kudune ana ':' sawise kunci map"); err != nil {
 				return nil, err
 			}
 			for p.match(T_NEWLINE) {
@@ -590,7 +590,7 @@ func (p *Parser) basePrimary() (Expression, error) {
 		}
 		for p.match(T_NEWLINE) {
 		}
-		if _, err := p.consume(T_RBRACE, "dikarepake '}' kanggo nutup kamus"); err != nil {
+		if _, err := p.consume(T_RBRACE, "kudune ana '}' nggo nutup map"); err != nil {
 			return nil, err
 		}
 		return &DictNode{Keys: keys, Values: values, Line: startTok.Line, Col: startTok.Column}, nil
@@ -639,7 +639,7 @@ func (p *Parser) basePrimary() (Expression, error) {
 				}
 				for p.match(T_NEWLINE) {
 				}
-				if _, err := p.consume(T_COLON, "dikarepake ':' sawise kunci kamus"); err != nil {
+				if _, err := p.consume(T_COLON, "kudune ana ':' sawise kunci map"); err != nil {
 					return nil, err
 				}
 				for p.match(T_NEWLINE) {
@@ -653,7 +653,7 @@ func (p *Parser) basePrimary() (Expression, error) {
 			}
 			for p.match(T_NEWLINE) {
 			}
-			if _, err := p.consume(T_RBRACKET, "dikarepake ']' kanggo nutup kamus"); err != nil {
+			if _, err := p.consume(T_RBRACKET, "kudune ana ']' nggo nutup map"); err != nil {
 				return nil, err
 			}
 			return &DictNode{Keys: keys, Values: values, Line: startTok.Line, Col: startTok.Column}, nil
@@ -680,7 +680,7 @@ func (p *Parser) basePrimary() (Expression, error) {
 		}
 		for p.match(T_NEWLINE) {
 		}
-		if _, err := p.consume(T_RBRACKET, "dikarepake ']' kanggo nutup dhaptar"); err != nil {
+		if _, err := p.consume(T_RBRACKET, "kudune ana ']' nggo nutup daftar"); err != nil {
 			return nil, err
 		}
 		return &ListNode{Elements: elements, Line: startTok.Line, Col: startTok.Column}, nil
@@ -730,7 +730,7 @@ func (p *Parser) basePrimary() (Expression, error) {
 			}
 			for p.match(T_NEWLINE) {
 			}
-			if _, err := p.consume(T_RPAREN, "dikarepake ')' sawise dhaptar argumen"); err != nil {
+			if _, err := p.consume(T_RPAREN, "kudune ana ')' sawise daftar argumen"); err != nil {
 				return nil, err
 			}
 			return &FuncCallNode{Callee: name, Args: args, Line: startTok.Line, Col: startTok.Column}, nil
@@ -748,13 +748,13 @@ func (p *Parser) basePrimary() (Expression, error) {
 		}
 		for p.match(T_NEWLINE) {
 		}
-		if _, err := p.consume(T_RPAREN, "dikarepake ')' sawise ekspresi"); err != nil {
+		if _, err := p.consume(T_RPAREN, "kudune ana ')' sawise ekspresi"); err != nil {
 			return nil, err
 		}
 		return expr, nil
 	}
 
 	cur := p.current()
-	return nil, fmt.Errorf("%s:%d:%d: sintaksis ora sah ing token %q", p.filename, cur.Line, cur.Column, cur.Value)
+	return nil, fmt.Errorf("%s:%d:%d: sintaksis ora sah neng token %q", p.filename, cur.Line, cur.Column, cur.Value)
 }
 
