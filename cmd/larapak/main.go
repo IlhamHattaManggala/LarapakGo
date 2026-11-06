@@ -11,9 +11,11 @@ import (
 
 	"github.com/IlhamHattaManggala/larapak-go/pkg/cache"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/larapak"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/ngapak"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/paths"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/queue"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/studio"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/view"
 )
 
 const version = "1.2.2"
@@ -62,6 +64,13 @@ func main() {
 			os.Exit(1)
 		}
 		createNewProject(projName, lang)
+
+	case "run", "mlakukna", "eksekusi":
+		if len(args) < 1 {
+			fmt.Println("Kleru: Diharapkan path berkas .ngpk. Tuladha: larapak mlakukna skrip.ngpk")
+			os.Exit(1)
+		}
+		runNgapakScript(args[0])
 
 	case "route:list", "dalan:daptar", "daptar:dalan", "rute:daptar":
 		showRouteList()
@@ -217,24 +226,55 @@ Perintah Dialek Ngapak (Asli):
   larapak resik:cache                           (Resiki cache sistem)
   larapak rikat:rakit                           (Kompilasi Rikat CSS JIT)
   larapak coba                                  (Jalankna seluruh test suite)
+  larapak mlakukna <berkas.ngpk>                (Jalankna skrip bahasa NgapakIn)
   larapak tulung                                (Ndeleng panduan iki)
 
 Perintah Standar (Laravel Artisan Style):
   larapak new, serve, route:list, make:controller, make:model, make:migration,
   make:middleware, make:job, make:seeder, migrate, migrate:fresh, migrate:status,
-  rollback, db:seed, queue:work, cache:clear, css:build, test, help, version
+  rollback, db:seed, queue:work, cache:clear, css:build, run, test, help, version
 
 Dokumentasi Resmi: https://larapak.my.id
 `, version)
 }
 
+func runNgapakScript(filePath string) {
+	app := larapak.New()
+	eng := ngapak.NewEngine(".", nil)
+	eng.BindRoutes(app)
+	_, err := eng.RunFile(filePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Kleru nalika njalankake %s: %v\n", filePath, err)
+		os.Exit(1)
+	}
+	routes := app.Routes()
+	if len(routes) > 0 {
+		fmt.Printf("✓ Kasil ngunggah lan validasi %d rute saka %s\n", len(routes), filepath.ToSlash(filePath))
+	}
+}
+
 func serveDemoApp(port string) {
 	app := larapak.New()
-	st := studio.New("LarapakGo Demo App", version, "local", "http://localhost:"+port)
+	st := studio.New("LarapakGo Application", version, "local", "http://localhost:"+port)
 
-	// 1. Welcome Page
-	app.GET("/", func(c *larapak.Context) error {
-		return c.HTML(http.StatusOK, `<!DOCTYPE html>
+	// Auto-detect and mount .ngpk routes if present in project
+	p := paths.GetPaths(".")
+	ngpkRouteFile := filepath.Join(p.Routes, "web.ngpk")
+	hasNgpkRoutes := false
+	if _, err := os.Stat(ngpkRouteFile); err == nil {
+		vEngine := view.New(p.Views)
+		ngpkEng := ngapak.NewEngine(".", vEngine)
+		ngpkEng.BindRoutesWithStudio(app, st)
+		if _, err := ngpkEng.RunFile(ngpkRouteFile); err == nil {
+			hasNgpkRoutes = true
+			fmt.Printf("[Rute] Kasil ngunggah rute Ngapak saka %s\n", filepath.ToSlash(ngpkRouteFile))
+		}
+	}
+
+	// 1. Welcome Page (mung yen durung didaftarake dening web.ngpk)
+	if !hasNgpkRoutes {
+		app.GET("/", func(c *larapak.Context) error {
+			return c.HTML(http.StatusOK, `<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -287,7 +327,9 @@ func serveDemoApp(port string) {
     </div>
 </body>
 </html>`)
-	})
+		})
+		st.RegisterRoute("GET", "/", "HomeController@Index")
+	}
 
 	// 2. JSON API Endpoints
 	app.Group("/api", func(r *larapak.Router) {
@@ -313,7 +355,6 @@ func serveDemoApp(port string) {
 	})
 
 	// 3. Register Routes into Studio
-	st.RegisterRoute("GET", "/", "HomeController@Index")
 	st.RegisterRoute("GET", "/api/status", "APIController@Status")
 	st.RegisterRoute("GET", "/api/users/:id", "UserController@Show")
 
@@ -335,7 +376,20 @@ func serveDemoApp(port string) {
 }
 
 func showRouteList() {
-	fmt.Printf(`
+	p := paths.GetPaths(".")
+	ngpkRouteFile := filepath.Join(p.Routes, "web.ngpk")
+	app := larapak.New()
+
+	if _, err := os.Stat(ngpkRouteFile); err == nil {
+		vEngine := view.New(p.Views)
+		ngpkEng := ngapak.NewEngine(".", vEngine)
+		ngpkEng.BindRoutes(app)
+		_, _ = ngpkEng.RunFile(ngpkRouteFile)
+	}
+
+	routes := app.Routes()
+	if len(routes) == 0 {
+		fmt.Printf(`
 +--------+------------------------+--------------------------+
 | Method | URI                    | Target                   |
 +--------+------------------------+--------------------------+
@@ -348,6 +402,17 @@ func showRouteList() {
 +--------+------------------------+--------------------------+
 Total Rute: 6 rute kadaptar.
 `)
+		return
+	}
+
+	fmt.Println("\n+--------+--------------------------------+--------------------------+")
+	fmt.Println("| Method | URI                            | Target                   |")
+	fmt.Println("+--------+--------------------------------+--------------------------+")
+	for _, r := range routes {
+		fmt.Printf("| %-6s | %-30s | %-24s |\n", r.Method, r.Pattern, "NgapakIn Handler")
+	}
+	fmt.Println("+--------+--------------------------------+--------------------------+")
+	fmt.Printf("Total Rute: %d rute kadaptar ing %s\n\n", len(routes), filepath.ToSlash(ngpkRouteFile))
 }
 
 func createNewProject(name, lang string) {
@@ -434,9 +499,16 @@ replace github.com/IlhamHattaManggala/larapak-go => %s
 	mainGo := fmt.Sprintf(`package main
 
 import (
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+
 	"github.com/IlhamHattaManggala/larapak-go/pkg/larapak"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/ngapak"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/paths"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/studio"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/view"
 	"%s/%s"
 )
 
@@ -444,9 +516,27 @@ func main() {
 	app := larapak.New()
 	st := studio.New("%s", "1.2.2", "local", "http://localhost:8080")
 
-	homeCtrl := &%s.HomeController{}
-	app.GET("/", homeCtrl.Index)
-	st.RegisterRoute("GET", "/", "HomeController@Index")
+	// Inisialisasi Sawangan (.nview) & Mesin NgapakIn (.ngpk)
+	p := paths.GetPaths(".")
+	vEngine := view.New(p.Views)
+	ngpkEng := ngapak.NewEngine(".", vEngine)
+	ngpkEng.BindRoutesWithStudio(app, st)
+
+	// Muat rute .ngpk yen ana
+	ngpkRouteFile := filepath.Join(p.Routes, "web.ngpk")
+	hasNgpkRoutes := false
+	if _, err := os.Stat(ngpkRouteFile); err == nil {
+		if _, err := ngpkEng.RunFile(ngpkRouteFile); err == nil {
+			hasNgpkRoutes = true
+			fmt.Printf("[Rute] Kasil ngunggah rute Ngapak saka %%s\n", filepath.ToSlash(ngpkRouteFile))
+		}
+	}
+
+	if !hasNgpkRoutes {
+		homeCtrl := &%s.HomeController{}
+		app.GET("/", homeCtrl.Index)
+		st.RegisterRoute("GET", "/", "HomeController@Index")
+	}
 
 	app.Group("/api", func(r *larapak.Router) {
 		r.GET("/status", func(c *larapak.Context) error {
@@ -469,10 +559,95 @@ func main() {
 		return nil
 	})
 
-	app.Run(":8080")
+	fmt.Println("\nAplikasi LarapakGo mlaku ing: http://localhost:8080")
+	fmt.Println("Route & API Studio aktif ing : http://localhost:8080/_studio\n")
+	if err := app.Run(":8080"); err != nil {
+		fmt.Fprintf(os.Stderr, "Kleru: %%v\n", err)
+	}
 }
 `, name, ctrlRelPath, name, ctrlPkg, statusMsg, lang, name)
 	_ = os.WriteFile(filepath.Join(name, "main.go"), []byte(mainGo), 0644)
+
+	// Berkas rute NgapakIn (web.ngpk)
+	webNgpkContent := `# ==============================================================================
+# Dalane Rute Aplikasi LarapakGo (.ngpk)
+# Ora Ngapak Ora Kepenak!
+# ==============================================================================
+
+rute.get("/", gawe(req, res)
+    balekna res.view("index", {
+        "judul": "` + welcomeGreeting + `",
+        "pesan": "` + statusMsg + `",
+        "bahasa": "` + lang + `",
+        "proyek": "` + name + `"
+    })
+rampung)
+
+rute.get("/api/salam", gawe(req, res)
+    balekna res.json({
+        "status": "sukses",
+        "pesan": "Halo saka rute NgapakIn (.ngpk) native Go!",
+        "bahasa": "` + lang + `",
+        "proyek": "` + name + `"
+    })
+rampung)
+`
+	_ = os.WriteFile(filepath.Join(p.Routes, "web.ngpk"), []byte(webNgpkContent), 0644)
+
+	// Berkas template Sawangan (.nview)
+	indexNviewContent := `<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ judul }} - LarapakGo</title>
+    <style>
+        :root {
+            --bg-base: #0B0C10;
+            --bg-surface: #111218;
+            --border: #1E202B;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --color-amber: #F59E0B;
+            --color-sky: #38BDF8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-base); color: var(--text-primary); display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+        .card { max-width: 620px; width: 100%; border: 1px solid var(--border); background: var(--bg-surface); padding: 48px; border-radius: 20px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .logo-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; padding: 4px 14px; border-radius: 9999px; background: rgba(245,158,11,0.12); color: var(--color-amber); border: 1px solid rgba(245,158,11,0.25); margin-bottom: 24px; }
+        h1 { font-size: 36px; margin-bottom: 12px; letter-spacing: -0.02em; color: var(--color-amber); }
+        p { font-size: 16px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 28px; }
+        .btn-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
+        .btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 10px; transition: opacity 0.2s; }
+        .btn-primary { background: var(--color-amber); color: #000; }
+        .btn-secondary { background: #1A1B24; color: var(--text-primary); border: 1px solid var(--border); }
+        .btn:hover { opacity: 0.9; }
+        .spec-box { border-top: 1px solid var(--border); padding-top: 24px; display: flex; justify-content: space-around; font-size: 13px; color: var(--text-secondary); }
+        .spec-val { color: var(--color-sky); font-weight: 600; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo-tag">
+            NgapakIn (.ngpk) &amp; Sawangan (.nview)
+        </div>
+        <h1>{{ judul }}</h1>
+        <p>{{ pesan }}</p>
+        
+        <div class="btn-group">
+            <a href="/_studio" class="btn btn-primary">Buka Route Studio &rarr;</a>
+            <a href="/api/salam" class="btn btn-secondary">Tes API Salam (.ngpk)</a>
+        </div>
+
+        <div class="spec-box">
+            <div>Basa: <span class="spec-val">{{ bahasa }}</span></div>
+            <div>Proyek: <span class="spec-val">{{ proyek }}</span></div>
+            <div>Engine: <span class="spec-val">LarapakGo v1.2.2</span></div>
+        </div>
+    </div>
+</body>
+</html>`
+	_ = os.WriteFile(filepath.Join(p.Views, "index.nview"), []byte(indexNviewContent), 0644)
 
 	homeCtrlContent := fmt.Sprintf(`package %s
 

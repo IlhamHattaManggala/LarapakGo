@@ -159,3 +159,21 @@ func cleanSegments(path string) []string {
 	return res
 }
 
+// RouteInfo provides metadata about a registered route.
+type RouteInfo struct {
+	Method  string
+	Pattern string
+}
+
+// Routes returns a snapshot of all registered routes.
+func (r *Router) Routes() []RouteInfo {
+	res := make([]RouteInfo, len(r.routes))
+	for i, rt := range r.routes {
+		res[i] = RouteInfo{
+			Method:  rt.method,
+			Pattern: rt.pattern,
+		}
+	}
+	return res
+}
+
