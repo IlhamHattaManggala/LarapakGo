@@ -2,11 +2,13 @@ package main
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -18,6 +20,24 @@ import (
 	"github.com/IlhamHattaManggala/larapak-go/pkg/studio"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/view"
 )
+
+//go:embed templates/views/layout.nview
+var templateLayoutNview string
+
+//go:embed templates/views/index.nview
+var templateIndexNview string
+
+//go:embed templates/public/css/rikat.css
+var templateRikatCSS string
+
+//go:embed templates/public/js/rikat.js
+var templateRikatJS string
+
+//go:embed templates/public/images/logo.png
+var templateLogoPNG []byte
+
+//go:embed templates/public/favicon.ico
+var templateFaviconICO []byte
 
 const version = "1.0.0"
 
@@ -345,6 +365,18 @@ func handleNgapakCommand(cmd string, args []string) {
 	}
 }
 
+func getDemoWelcomeHTML() string {
+	sectionPattern := regexp.MustCompile(`(?s)@section\s+["']content["'](.*?)(?:@endsection|@rampung)`)
+	m := sectionPattern.FindStringSubmatch(templateIndexNview)
+	content := ""
+	if len(m) > 1 {
+		content = strings.TrimSpace(m[1])
+	}
+	html := strings.Replace(templateLayoutNview, `@yield "content"`, content, 1)
+	html = strings.ReplaceAll(html, `{{ title }}`, "LarapakGo")
+	return html
+}
+
 func serveDemoApp(port string) {
 	app := larapak.New()
 	st := studio.New("LarapakGo Application", version, "local", "http://localhost:"+port)
@@ -366,62 +398,32 @@ func serveDemoApp(port string) {
 	// 1. Kaca Pembuka (mung nek durung didaftarna neng web.ngpk)
 	if !hasNgpkRoutes {
 		app.GET("/", func(c *larapak.Context) error {
-			return c.HTML(http.StatusOK, `<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Selamat Teka neng LarapakGo</title>
-    <style>
-        :root {
-            --bg-base: #0B0C10;
-            --bg-surface: #111218;
-            --border: #1E202B;
-            --text-primary: #F8FAFC;
-            --text-secondary: #94A3B8;
-            --color-amber: #F59E0B;
-            --color-sky: #38BDF8;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-base); color: var(--text-primary); display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
-        .card { max-width: 620px; width: 100%; border: 1px solid var(--border); background: var(--bg-surface); padding: 48px; border-radius: 20px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-        .logo-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; padding: 4px 14px; border-radius: 9999px; background: rgba(245,158,11,0.12); color: var(--color-amber); border: 1px solid rgba(245,158,11,0.25); margin-bottom: 24px; }
-        h1 { font-size: 42px; margin-bottom: 12px; letter-spacing: -0.02em; }
-        p { font-size: 16px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 28px; }
-        .btn-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
-        .btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 10px; transition: opacity 0.2s; }
-        .btn-primary { background: var(--color-amber); color: #000; }
-        .btn-secondary { background: #1A1B24; color: var(--text-primary); border: 1px solid var(--border); }
-        .btn:hover { opacity: 0.9; }
-        .spec-box { border-top: 1px solid var(--border); padding-top: 24px; display: flex; justify-content: space-around; font-size: 13px; color: var(--text-secondary); }
-        .spec-val { color: var(--color-sky); font-weight: 600; font-family: monospace; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <div class="logo-tag">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-            100% Go Standard Library
-        </div>
-        <h1>LarapakGo</h1>
-        <p>Framework Web MVC Modern Berbasis Basa Go &amp; Dialek Ngapak Tegalan.<br>Ora Ngapak Ora Kepenak!</p>
-        
-        <div class="btn-group">
-            <a href="/_studio" class="btn btn-primary">Buka Route Studio &rarr;</a>
-            <a href="/api/status" class="btn btn-secondary">Coba API Status</a>
-        </div>
-
-        <div class="spec-box">
-            <div>Engine: <span class="spec-val">Go 1.25+</span></div>
-            <div>Versi: <span class="spec-val">v1.0.0</span></div>
-            <div>Latency: <span class="spec-val">&lt; 0.5 ms</span></div>
-        </div>
-    </div>
-</body>
-</html>`)
+			return c.HTML(http.StatusOK, getDemoWelcomeHTML())
 		})
 		st.RegisterRoute("GET", "/", "HomeController@Index")
 	}
+
+	// Static assets handler nggo mode demo
+	app.GET("/css/rikat.css", func(c *larapak.Context) error {
+		c.Header("Content-Type", "text/css; charset=utf-8")
+		return c.String(http.StatusOK, "%s", templateRikatCSS)
+	})
+	app.GET("/js/rikat.js", func(c *larapak.Context) error {
+		c.Header("Content-Type", "application/javascript; charset=utf-8")
+		return c.String(http.StatusOK, "%s", templateRikatJS)
+	})
+	app.GET("/images/logo.png", func(c *larapak.Context) error {
+		c.Header("Content-Type", "image/png")
+		c.Writer.WriteHeader(http.StatusOK)
+		_, err := c.Writer.Write(templateLogoPNG)
+		return err
+	})
+	app.GET("/favicon.ico", func(c *larapak.Context) error {
+		c.Header("Content-Type", "image/x-icon")
+		c.Writer.WriteHeader(http.StatusOK)
+		_, err := c.Writer.Write(templateFaviconICO)
+		return err
+	})
 
 	// 2. JSON API Endpoints
 	app.Group("/api", func(r *larapak.Router) {
@@ -630,6 +632,27 @@ func main() {
 		st.RegisterRoute("GET", "/", "HomeController@Index")
 	}
 
+	// Layani berkas statis (css, js, images, favicon)
+	app.GET("/css/*file", func(c *larapak.Context) error {
+		filePath := filepath.Join(p.PublicCSS, c.Param("file"))
+		http.ServeFile(c.Writer, c.Request, filePath)
+		return nil
+	})
+	app.GET("/js/*file", func(c *larapak.Context) error {
+		filePath := filepath.Join(p.PublicJS, c.Param("file"))
+		http.ServeFile(c.Writer, c.Request, filePath)
+		return nil
+	})
+	app.GET("/images/*file", func(c *larapak.Context) error {
+		filePath := filepath.Join(p.PublicImages, c.Param("file"))
+		http.ServeFile(c.Writer, c.Request, filePath)
+		return nil
+	})
+	app.GET("/favicon.ico", func(c *larapak.Context) error {
+		http.ServeFile(c.Writer, c.Request, filepath.Join(p.Public, "favicon.ico"))
+		return nil
+	})
+
 	app.Group("/api", func(r *larapak.Router) {
 		r.GET("/status", func(c *larapak.Context) error {
 			return c.JSON(http.StatusOK, map[string]string{
@@ -668,14 +691,16 @@ func main() {
 
 rute.get("/", gawe(req, res)
     balekna res.view("index", {
+        "title": "` + welcomeGreeting + `",
         "judul": "` + welcomeGreeting + `",
         "pesan": "` + statusMsg + `",
         "bahasa": "` + lang + `",
-        "proyek": "` + name + `"
+        "proyek": "` + name + `",
+        "versi": "1.0.0"
     })
 rampung)
 
-rute.get("/api/salam", gawe(req, res)
+rute.get("/api/status", gawe(req, res)
     balekna res.json({
         "status": "sukses",
         "pesan": "Halo saka rute NgapakIn (.ngpk) native Go!",
@@ -686,102 +711,45 @@ rampung)
 `
 	_ = os.WriteFile(filepath.Join(p.Routes, "web.ngpk"), []byte(webNgpkContent), 0644)
 
-	// Berkas template Sawangan (.nview)
-	indexNviewContent := `<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ judul }} - LarapakGo</title>
-    <style>
-        :root {
-            --bg-base: #0B0C10;
-            --bg-surface: #111218;
-            --border: #1E202B;
-            --text-primary: #F8FAFC;
-            --text-secondary: #94A3B8;
-            --color-amber: #F59E0B;
-            --color-sky: #38BDF8;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-base); color: var(--text-primary); display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
-        .card { max-width: 620px; width: 100%; border: 1px solid var(--border); background: var(--bg-surface); padding: 48px; border-radius: 20px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-        .logo-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; padding: 4px 14px; border-radius: 9999px; background: rgba(245,158,11,0.12); color: var(--color-amber); border: 1px solid rgba(245,158,11,0.25); margin-bottom: 24px; }
-        h1 { font-size: 36px; margin-bottom: 12px; letter-spacing: -0.02em; color: var(--color-amber); }
-        p { font-size: 16px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 28px; }
-        .btn-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
-        .btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 10px; transition: opacity 0.2s; }
-        .btn-primary { background: var(--color-amber); color: #000; }
-        .btn-secondary { background: #1A1B24; color: var(--text-primary); border: 1px solid var(--border); }
-        .btn:hover { opacity: 0.9; }
-        .spec-box { border-top: 1px solid var(--border); padding-top: 24px; display: flex; justify-content: space-around; font-size: 13px; color: var(--text-secondary); }
-        .spec-val { color: var(--color-sky); font-weight: 600; font-family: monospace; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <div class="logo-tag">
-            NgapakIn (.ngpk) &amp; Sawangan (.nview)
-        </div>
-        <h1>{{ judul }}</h1>
-        <p>{{ pesan }}</p>
-        
-        <div class="btn-group">
-            <a href="/_studio" class="btn btn-primary">Buka Route Studio &rarr;</a>
-            <a href="/api/salam" class="btn btn-secondary">Tes API Salam (.ngpk)</a>
-        </div>
+	// Berkas template Sawangan (.nview) identik persis karo edisi Python
+	_ = os.WriteFile(filepath.Join(p.Views, "layout.nview"), []byte(templateLayoutNview), 0644)
+	_ = os.WriteFile(filepath.Join(p.Views, "index.nview"), []byte(templateIndexNview), 0644)
 
-        <div class="spec-box">
-            <div>Basa: <span class="spec-val">{{ bahasa }}</span></div>
-            <div>Proyek: <span class="spec-val">{{ proyek }}</span></div>
-            <div>Engine: <span class="spec-val">LarapakGo v1.0.0</span></div>
-        </div>
-    </div>
-</body>
-</html>`
-	_ = os.WriteFile(filepath.Join(p.Views, "index.nview"), []byte(indexNviewContent), 0644)
+	// Berkas static assets publik
+	_ = os.WriteFile(filepath.Join(p.PublicCSS, "rikat.css"), []byte(templateRikatCSS), 0644)
+	_ = os.WriteFile(filepath.Join(p.PublicJS, "rikat.js"), []byte(templateRikatJS), 0644)
+	_ = os.WriteFile(filepath.Join(p.PublicImages, "logo.png"), templateLogoPNG, 0644)
+	_ = os.WriteFile(filepath.Join(p.Public, "favicon.ico"), templateFaviconICO, 0644)
 
 	homeCtrlContent := fmt.Sprintf(`package %s
 
 import (
 	"net/http"
+
 	"github.com/IlhamHattaManggala/larapak-go/pkg/larapak"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/paths"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/view"
 )
 
 type HomeController struct{}
 
 func (h *HomeController) Index(c *larapak.Context) error {
-	return c.HTML(http.StatusOK, `+"`"+`<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Proyek %s - LarapakGo</title>
-    <style>
-        body { font-family: -apple-system, sans-serif; background: #0b0c10; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .box { text-align: center; border: 1px solid #1e202b; background: #111218; padding: 48px; border-radius: 16px; max-width: 520px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); margin-bottom: 16px; }
-        h1 { color: #f59e0b; margin-bottom: 8px; font-size: 32px; }
-        p { color: #94a3b8; line-height: 1.6; margin-bottom: 24px; }
-        .links { display: flex; gap: 12px; justify-content: center; }
-        a { color: #000; background: #f59e0b; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; }
-        a.sec { background: #1e202b; color: #38bdf8; border: 1px solid #38bdf8; }
-        a:hover { opacity: 0.9; }
-    </style>
-</head>
-<body>
-    <div class="box">
-        <div class="badge">Basa: %s &bull; Go 1.25+</div>
-        <h1>%s</h1>
-        <p>%s</p>
-        <div class="links">
-            <a href="/_studio">Buka Route Studio &rarr;</a>
-            <a href="/api/status" class="sec">API Status</a>
-        </div>
-    </div>
-</body>
-</html>`+"`"+`)
+	p := paths.GetPaths(".")
+	vEngine := view.New(p.Views)
+	html, err := vEngine.RenderTemplate("index", map[string]any{
+		"title":  "Sugeng Rawuh",
+		"judul":  "Sugeng Rawuh",
+		"pesan":  "%s",
+		"bahasa": "%s",
+		"proyek": "%s",
+		"versi":  "1.0.0",
+	})
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "Gagal render view: %%v", err)
+	}
+	return c.HTML(http.StatusOK, html)
 }
-`, ctrlPkg, name, lang, name, welcomeGreeting)
+`, ctrlPkg, statusMsg, lang, name)
 	_ = os.WriteFile(filepath.Join(p.Controllers, "HomeController.go"), []byte(homeCtrlContent), 0644)
 
 	userModelContent := fmt.Sprintf(`package %s

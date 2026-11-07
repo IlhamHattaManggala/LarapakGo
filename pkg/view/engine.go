@@ -49,8 +49,8 @@ func (e *Engine) RenderString(content string, data map[string]any) (string, erro
 		content = layoutPattern.ReplaceAllString(content, "")
 	}
 
-	// Extract sections: @section "name" ... @endsection
-	sectionPattern := regexp.MustCompile(`(?s)@section\s+["']([^"']+)["'](.*?)@endsection`)
+	// Extract sections: @section "name" ... @endsection or @rampung
+	sectionPattern := regexp.MustCompile(`(?s)@section\s+["']([^"']+)["'](.*?)(?:@endsection|@rampung)`)
 	sections := make(map[string]string)
 	matches := sectionPattern.FindAllStringSubmatch(content, -1)
 	for _, m := range matches {
