@@ -8,6 +8,7 @@ content_types = """<?xml version="1.0" encoding="utf-8"?>
   <Default Extension="vsixmanifest" ContentType="text/xml"/>
   <Default Extension="txt" ContentType="text/plain"/>
   <Default Extension="svg" ContentType="image/svg+xml"/>
+  <Default Extension="png" ContentType="image/png"/>
 </Types>
 """
 
@@ -17,7 +18,7 @@ vsix_manifest = """<?xml version="1.0" encoding="utf-8"?>
     <Identity Id="larapak-vscode" Version="1.2.2" Language="en-US" Publisher="IlhamHattaManggala"/>
     <DisplayName>Larapak &amp; NgapakIn Language Support</DisplayName>
     <Description xml:space="preserve">Syntax highlighting, file icons, snippets, and language support for NgapakIn (.ngpk) scripts and Sawangan (.nview) templates in LarapakGo.</Description>
-    <Icon>extension/icons/ngpk.svg</Icon>
+    <Icon>extension/icons/favicon.png</Icon>
     <Categories>Programming Languages,Snippets</Categories>
   </Metadata>
   <Installation>
@@ -28,7 +29,7 @@ vsix_manifest = """<?xml version="1.0" encoding="utf-8"?>
     <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true"/>
     <Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/README.md" Addressable="true"/>
     <Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/LICENSE" Addressable="true"/>
-    <Asset Type="Microsoft.VisualStudio.Services.Icons.Default" Path="extension/icons/ngpk.svg" Addressable="true"/>
+    <Asset Type="Microsoft.VisualStudio.Services.Icons.Default" Path="extension/icons/favicon.png" Addressable="true"/>
   </Assets>
 </PackageManifest>
 """

@@ -23,7 +23,7 @@
     "sawangan",
     "template"
   ],
-  "icon": "./icons/ngpk.svg",
+  "icon": "./icons/favicon.png",
   "contributes": {
     "languages": [
       {
