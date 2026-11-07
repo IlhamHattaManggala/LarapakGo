@@ -36,6 +36,9 @@ var templateRikatJS string
 //go:embed templates/public/images/logo.png
 var templateLogoPNG []byte
 
+//go:embed templates/public/favicon.png
+var templateFaviconPNG []byte
+
 //go:embed templates/public/favicon.ico
 var templateFaviconICO []byte
 
@@ -471,7 +474,7 @@ func serveDemoApp(port string) {
 		}
 		c.Header("Content-Type", "image/png")
 		c.Writer.WriteHeader(http.StatusOK)
-		_, err := c.Writer.Write(templateLogoPNG)
+		_, err := c.Writer.Write(templateFaviconPNG)
 		return err
 	})
 
@@ -686,7 +689,7 @@ rampung
 	_ = os.WriteFile(filepath.Join(p.PublicCSS, "style.css"), []byte(templateRikatCSS), 0644)
 	_ = os.WriteFile(filepath.Join(p.PublicJS, "rikat.js"), []byte(templateRikatJS), 0644)
 	_ = os.WriteFile(filepath.Join(p.PublicImages, "logo.png"), templateLogoPNG, 0644)
-	_ = os.WriteFile(filepath.Join(p.Public, "favicon.png"), templateLogoPNG, 0644)
+	_ = os.WriteFile(filepath.Join(p.Public, "favicon.png"), templateFaviconPNG, 0644)
 	_ = os.WriteFile(filepath.Join(p.Public, "favicon.ico"), templateFaviconICO, 0644)
 
 	// 6. Konfigurasi Lingkungan (.env)
