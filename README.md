@@ -6,16 +6,17 @@ LarapakGo adalah adaptasi performa tinggi dari ekosistem web framework Larapak y
 
 ---
 
-## Cara Instalasi Rikat (One-Line Installer)
+## Cara Instalasi Rikat
 
-Anda bisa langsung memasang binary mandiri `larapak` ke sistem operasi Anda hanya dengan satu baris perintah tanpa perlu mengompilasi manual:
+Anda bisa langsung memasang LarapakGo & NgapakIn ke sistem operasi Anda:
 
-### 1. Windows (PowerShell)
-Buka terminal PowerShell lalu jalankan:
-```powershell
-irm https://raw.githubusercontent.com/IlhamHattaManggala/LarapakGo/main/install.ps1 | iex
-```
-*Installer ini otomatis mengunduh `larapak.exe` ke `$HOME\.larapak\bin` dan mendaftarkannya ke variabel Environment PATH User Anda.*
+### 1. Windows (Installer Resmi .exe)
+Unduh berkas instalasi **`LarapakGo-Setup-v1.0.0.exe`** dari rilis resmi, lalu buka dan ikuti wizard instalasi (*Next > Next > Finish*).
+
+Installer ini secara otomatis:
+- Memasang binary `larapak.exe` dan alias `ngapakin.exe`.
+- Mendaftarkan path ke variabel lingkungan `PATH` Windows secara otomatis (tanpa perlu pengaturan manual).
+- Menyediakan uninstaller resmi yang terintegrasi di Windows Settings (*Installed Apps*).
 
 ### 2. Linux & macOS (Bash / Zsh)
 Buka terminal lalu jalankan:
@@ -174,8 +175,10 @@ LarapakGo/
 ├── README.md                  # Dokumentasi
 ├── LICENSE                    # Lisensi MIT
 ├── .gitignore                 # Filter git
-├── install.ps1                # Skrip instalasi satu baris untuk Windows (PowerShell)
 ├── install.sh                 # Skrip instalasi satu baris untuk Linux & macOS (Bash)
+├── installer/                 # Skrip pembuatan paket installer Windows (Inno Setup)
+│   ├── setup.iss
+│   └── app.ico
 ├── larapak.exe                # Binary mandiri All-in-One (LarapakGo + Mesin NgapakIn)
 ├── dist/                      # Rilis binary mandiri lintas platform & ekstensi
 │   ├── larapak-v1.0.0-windows-amd64.exe
