@@ -1,8 +1,31 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/IlhamHattaManggala/LarapakGo/main/cmd/larapak/templates/public/favicon.png" width="130" alt="LarapakGo Logo" />
+</p>
+
 # LarapakGo
 
-**Larapak MVC Web Framework versi Golang (Go 1.25+)**
+[![Release Version](https://img.shields.io/badge/version-v1.0.0-orange.svg)](https://github.com/IlhamHattaManggala/LarapakGo/releases)
+[![Go Version](https://img.shields.io/badge/go-1.21%20%7C%201.22%20%7C%201.23%20%7C%201.24%20%7C%201.25-00ADD8.svg?logo=go)](https://golang.org)
+[![Dependencies](https://img.shields.io/badge/dependencies-0%20external-brightgreen.svg)](https://golang.org/pkg/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue.svg)](https://github.com/IlhamHattaManggala/LarapakGo/releases)
+
+**Larapak MVC Web Framework versi Golang (Go 1.21+)**
 
 LarapakGo adalah adaptasi performa tinggi dari ekosistem web framework Larapak yang ditulis murni dalam bahasa pemrograman **Go (Golang)**. Mengadopsi arsitektur lengkap ala Laravel, dialek lokal Ngapak Tegalan yang ramah dan lugas, serta performa tinggi khas Go dengan **100% Go Standard Library** tanpa ketergantungan paket eksternal pihak ketiga yang membengkak.
+
+---
+
+## Navigasi Dokumentasi Resmi
+
+Untuk panduan mendalam dan tata kelola proyek, silakan rujuk dokumen resmi berikut:
+
+- [Kebijakan Keamanan (SECURITY.md)](SECURITY.md) — Panduan arsitektur keamanan, proteksi CSRF, XSS, hashing PBKDF2, dan pelaporan kerentanan.
+- [Panduan Deployment Produksi (DEPLOYMENT.md)](DEPLOYMENT.md) — Langkah deployment ke VPS Linux (Systemd & Nginx), Docker Compose, dan Cloud PaaS.
+- [Panduan Kontribusi (CONTRIBUTING.md)](CONTRIBUTING.md) — Alur kerja kontribusi, strategi percabangan Git, standar kode, dan unit testing.
+- [Kode Etik Komunitas (CODE_OF_CONDUCT.md)](CODE_OF_CONDUCT.md) — Standar perilaku dan komitmen lingkungan komunitas yang inklusif.
+- [Catatan Perubahan (CHANGELOG.md)](CHANGELOG.md) — Riwayat rilis fitur, perbaikan bug, dan evolusi proyek sesuai Semantic Versioning.
+- [Lisensi Perangkat Lunak (LICENSE)](LICENSE) — Ketentuan lisensi terbuka MIT.
 
 ---
 
@@ -167,13 +190,18 @@ func main() {
 
 ---
 
-## Struktur Arsitektur
+## Struktur Repositori
 
 ```
 LarapakGo/
 ├── go.mod                     # Modul Go
-├── README.md                  # Dokumentasi
-├── LICENSE                    # Lisensi MIT
+├── README.md                  # Dokumentasi Utama
+├── SECURITY.md                # Kebijakan Keamanan & Laporan Kerentanan
+├── DEPLOYMENT.md              # Panduan Deployment Produksi (VPS, Docker, Cloud)
+├── CONTRIBUTING.md            # Panduan Kontribusi & Standar Kode
+├── CODE_OF_CONDUCT.md         # Kode Etik Komunitas
+├── CHANGELOG.md               # Catatan Perubahan & Riwayat Rilis SemVer
+├── LICENSE                    # Lisensi Open-Source MIT
 ├── .gitignore                 # Filter git
 ├── install.sh                 # Skrip instalasi satu baris untuk Linux & macOS (Bash)
 ├── installer/                 # Skrip pembuatan paket installer Windows (Inno Setup)
@@ -181,6 +209,7 @@ LarapakGo/
 │   └── app.ico
 ├── larapak.exe                # Binary mandiri All-in-One (LarapakGo + Mesin NgapakIn)
 ├── dist/                      # Rilis binary mandiri lintas platform & ekstensi
+│   ├── LarapakGo-Setup-v1.0.0.exe
 │   ├── larapak-v1.0.0-windows-amd64.exe
 │   ├── larapak-v1.0.0-linux-amd64
 │   ├── larapak-v1.0.0-darwin-arm64
