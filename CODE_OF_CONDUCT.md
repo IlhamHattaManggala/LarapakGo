@@ -46,3 +46,4 @@ Jika Anda mengalami atau menyaksikan perilaku yang melanggar kode etik ini, hara
 - **Situs Resmi / Kontak**: [ilhamhattamanggala.my.id](https://ilhamhattamanggala.my.id)
 
 Semua laporan akan ditinjau secara rahasia, profesional, dan ditindaklanjuti secara adil demi menjaga kenyamanan bersama.
+

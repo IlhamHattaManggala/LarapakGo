@@ -68,3 +68,4 @@ Jika Anda menemukan potensi kerentanan keamanan di LarapakGo, kami sangat mengha
 - **Konfirmasi Penerimaan**: Maksimal dalam 1x24 jam hingga 48 jam kerja.
 - **Tinjauan & Validasi**: Tim kami akan memverifikasi temuan dan menentukan tingkat keparahan (CVSS).
 - **Rilis Tambalan (*Patch*)**: Perbaikan akan disiapkan di branch privat dan dirilis sesegera mungkin bersamaan dengan pengumuman rilis dan atribusi kepada penemu kerentanan.
+

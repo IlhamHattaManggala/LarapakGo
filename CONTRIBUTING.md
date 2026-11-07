@@ -97,3 +97,4 @@ go vet ./...
 3. **Dokumentasi & Komentar**:
    - Berikan komentar dokumen (*docstring*) pada setiap fungsi, metode, tipe, dan konstanta publik.
    - Komentar harus menjelaskan **alasan (WHY)** suatu logika diterapkan, bukan sekadar mengulang kode (WHAT).
+

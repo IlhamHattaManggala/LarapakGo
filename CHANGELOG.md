@@ -79,3 +79,4 @@ Versi 1.0.0 menandai peluncuran perdana arsitektur web framework Larapak yang di
   - Installer Windows resmi berbasis Inno Setup (`dist/LarapakGo-Setup-v1.0.0.exe`) dengan auto-PATH registration dan uninstaller.
   - Skrip pemasang otomatis Unix (`install.sh`) untuk Linux & macOS.
   - Binary portabel mandiri: `larapak-v1.0.0-windows-amd64.exe`, `larapak-v1.0.0-linux-amd64`, dan `larapak-v1.0.0-darwin-arm64`.
+

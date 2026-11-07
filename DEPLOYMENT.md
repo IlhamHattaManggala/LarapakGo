@@ -281,3 +281,4 @@ Sebelum mempublikasikan aplikasi ke publik, verifikasi checklist berikut:
   ```
 - [ ] SSL/TLS sudah aktif (akses HTTP otomatis diarahkan ke HTTPS).
 - [ ] Token `@csrf` dipasang pada seluruh formulir interaktif di template Sawangan (`.nview`).
+
