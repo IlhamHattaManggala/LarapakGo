@@ -32,6 +32,7 @@ case "$OS" in
         case "$ARCH" in
             x86_64|amd64)
                 BINARY_NAME="larapak-v$VERSION-linux-amd64"
+                NGAPAK_BINARY="ngapakin-v$VERSION-linux-amd64"
                 ;;
             *)
                 echo "[Kliru] Arsitektur Linux $ARCH durung didukung sacara langsung."
@@ -43,9 +44,11 @@ case "$OS" in
         case "$ARCH" in
             arm64|aarch64)
                 BINARY_NAME="larapak-v$VERSION-darwin-arm64"
+                NGAPAK_BINARY="ngapakin-v$VERSION-darwin-arm64"
                 ;;
             x86_64|amd64)
                 BINARY_NAME="larapak-v$VERSION-darwin-arm64"
+                NGAPAK_BINARY="ngapakin-v$VERSION-darwin-arm64"
                 ;;
             *)
                 echo "[Kliru] Arsitektur macOS $ARCH durung didukung sacara langsung."
@@ -60,25 +63,29 @@ case "$OS" in
 esac
 
 DOWNLOAD_URL="https://raw.githubusercontent.com/$REPO_OWNER/$REPO_NAME/$BRANCH/dist/$BINARY_NAME"
+NGAPAK_DOWNLOAD_URL="https://raw.githubusercontent.com/$REPO_OWNER/$REPO_NAME/$BRANCH/dist/$NGAPAK_BINARY"
 
 # 2. Nemtokna Folder Instalasi
 INSTALL_DIR="$HOME/.larapak/bin"
 mkdir -p "$INSTALL_DIR"
 TARGET_BIN="$INSTALL_DIR/larapak"
+TARGET_NGAPAK="$INSTALL_DIR/ngapakin"
 
 # 3. Ngundhuh Binary
-echo "[+] Ngundhuh $BINARY_NAME saka GitHub..."
+echo "[+] Ngundhuh Larapak & NgapakIn saka GitHub..."
 if command -v curl >/dev/null 2>&1; then
     curl -fsSL "$DOWNLOAD_URL" -o "$TARGET_BIN"
+    curl -fsSL "$NGAPAK_DOWNLOAD_URL" -o "$TARGET_NGAPAK"
 elif command -v wget >/dev/null 2>&1; then
     wget -qO "$TARGET_BIN" "$DOWNLOAD_URL"
+    wget -qO "$TARGET_NGAPAK" "$NGAPAK_DOWNLOAD_URL"
 else
     echo "[Kliru] Butuh curl utawa wget nggo ngundhuh berkas."
     exit 1
 fi
 
-chmod +x "$TARGET_BIN"
-echo "[OK] Berkas binary sukses diundhuh maring: $TARGET_BIN"
+chmod +x "$TARGET_BIN" "$TARGET_NGAPAK"
+echo "[OK] Berkas binary sukses diundhuh maring: $INSTALL_DIR"
 
 # 4. Nambahna maring PATH Profil Shell
 SHELL_CONFIG=""

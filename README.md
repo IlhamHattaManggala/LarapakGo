@@ -176,11 +176,15 @@ LarapakGo/
 ├── .gitignore                 # Filter git
 ├── install.ps1                # Skrip instalasi satu baris untuk Windows (PowerShell)
 ├── install.sh                 # Skrip instalasi satu baris untuk Linux & macOS (Bash)
-├── larapak.exe                # Binary mandiri root Windows
+├── larapak.exe                # Binary mandiri framework Larapak
+├── ngapakin.exe               # Binary mandiri bahasa NgapakIn
 ├── dist/                      # Rilis binary mandiri lintas platform & ekstensi
 │   ├── larapak-v1.0.0-windows-amd64.exe
 │   ├── larapak-v1.0.0-linux-amd64
 │   ├── larapak-v1.0.0-darwin-arm64
+│   ├── ngapakin-v1.0.0-windows-amd64.exe
+│   ├── ngapakin-v1.0.0-linux-amd64
+│   ├── ngapakin-v1.0.0-darwin-arm64
 │   └── larapak-vscode-1.0.0.vsix
 ├── editors/
 │   └── vscode/                # Paket ekstensi Visual Studio Code untuk .ngpk & .nview
@@ -194,7 +198,9 @@ LarapakGo/
 │           ├── ngapak.json
 │           └── nview.json
 ├── cmd/
-│   └── larapak/               # Binary CLI & Project Scaffolder
+│   ├── larapak/               # Binary CLI & Project Scaffolder
+│   │   └── main.go
+│   └── ngapakin/              # Binary CLI Bahasa Pemrograman NgapakIn
 │       └── main.go
 └── pkg/
     ├── larapak/               # Application, Context, Router, Middleware

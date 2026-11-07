@@ -28,7 +28,10 @@ if ($Arch -ne "amd64") {
 }
 
 $BinaryName = "larapak-v$Version-windows-amd64.exe"
+$NgapakBinaryName = "ngapakin-v$Version-windows-amd64.exe"
+
 $DownloadUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/dist/$BinaryName"
+$NgapakDownloadUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/dist/$NgapakBinaryName"
 
 # 2. Nemtokna Folder Instalasi
 $InstallDir = Join-Path $env:USERPROFILE ".larapak\bin"
@@ -37,21 +40,25 @@ if (-not (Test-Path $InstallDir)) {
 }
 
 $TargetExe = Join-Path $InstallDir "larapak.exe"
+$TargetNgapakExe = Join-Path $InstallDir "ngapakin.exe"
 
-# 3. Ngundhuh Binary
-Write-Host "[+] Ngundhuh LarapakGo saka GitHub..." -ForegroundColor Cyan
+# 3. Ngundhuh Binary Larapak & NgapakIn
+Write-Host "[+] Ngundhuh Larapak & NgapakIn saka GitHub..." -ForegroundColor Cyan
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     Invoke-WebRequest -Uri $DownloadUrl -OutFile $TargetExe -UseBasicParsing
-    Write-Host "[OK] Berkas binary sukses diundhuh maring: $TargetExe" -ForegroundColor Green
+    Invoke-WebRequest -Uri $NgapakDownloadUrl -OutFile $TargetNgapakExe -UseBasicParsing
+    Write-Host "[OK] Berkas binary sukses diundhuh maring: $InstallDir" -ForegroundColor Green
 } catch {
     Write-Host "[Pèngetan] Gagal ngundhuh saka dist, nyoba ngundhuh binary utama..." -ForegroundColor Yellow
     $FallbackUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/larapak.exe"
+    $NgapakFallbackUrl = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/ngapakin.exe"
     try {
         Invoke-WebRequest -Uri $FallbackUrl -OutFile $TargetExe -UseBasicParsing
+        Invoke-WebRequest -Uri $NgapakFallbackUrl -OutFile $TargetNgapakExe -UseBasicParsing
         Write-Host "[OK] Berkas binary sukses diundhuh saka fallback." -ForegroundColor Green
     } catch {
-        Write-Host "[Kliru] Gagal ngundhuh binary LarapakGo: $_" -ForegroundColor Red
+        Write-Host "[Kliru] Gagal ngundhuh binary: $_" -ForegroundColor Red
         exit 1
     }
 }
