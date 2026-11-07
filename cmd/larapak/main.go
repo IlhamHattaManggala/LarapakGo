@@ -178,6 +178,13 @@ func main() {
 		}
 		createLiveComponent(args[0])
 
+	case "make:resource", "gawe:sumber", "gawe:resource":
+		if len(args) < 1 {
+			fmt.Println("Kliru: Wei jeneng sumber (resource) ndisit. Contohe: larapak gawe:sumber Produk")
+			os.Exit(1)
+		}
+		createResource(args[0])
+
 	// =========================================================================
 	// 4. DATABASE & MIGRASI
 	// =========================================================================
@@ -273,6 +280,7 @@ Perintah Dialek Ngapak (Asli):
   larapak anyar <NamaProyek> [--bahasa=ngapak|indonesia|english]
   larapak ladeni [port]                         (Urubna server lokal, Studio & Auto-Reload)
   larapak dalan:daptar                          (Daftar kabeh rute HTTP)
+  larapak gawe:sumber <NamaSumber>              (Gawe lengkap Model, Migrasi, CRUD Controller & Views)
   larapak gawe:pangatur <NamaController>        (Gawe controller anyar)
   larapak gawe:wujud <NamaModel>                (Gawe model ORM anyar)
   larapak gawe:urip <NamaKomponen>              (Gawe komponen realtime RikatLive)
@@ -295,7 +303,7 @@ Perintah Dialek Ngapak (Asli):
   larapak tulung                                (Ndeleng panduan kiye)
 
 Perintah Standar (Laravel Artisan Style):
-  larapak new, serve, route:list, make:controller, make:model, make:live, make:migration,
+  larapak new, serve, route:list, make:resource, make:controller, make:model, make:live, make:migration,
   make:middleware, make:job, make:seeder, migrate, migrate:fresh, migrate:status,
   rollback, db:seed, queue:work, cache:clear, css:build, run, repl, test, help, version
 
@@ -1270,6 +1278,295 @@ rampung
 Cara pasang neng template sawangan (.nview):
   @live("%s")
 `, name, filepath.ToSlash(scriptPath), filepath.ToSlash(viewPath), name)
+}
+
+func createResource(name string) {
+	raw := strings.TrimSpace(name)
+	if raw == "" {
+		fmt.Println("Kliru: Jeneng sumber ora kena kosong.")
+		return
+	}
+
+	pascalName := strings.Title(raw)
+	lowerName := strings.ToLower(pascalName)
+	pluralLower := lowerName
+	if !strings.HasSuffix(pluralLower, "s") {
+		pluralLower += "s"
+	}
+	controllerName := pascalName + "Controller"
+	tableName := pluralLower
+
+	p := paths.GetPaths(".")
+	_ = os.MkdirAll(p.Models, 0755)
+	_ = os.MkdirAll(p.Migrations, 0755)
+	_ = os.MkdirAll(p.Controllers, 0755)
+	viewDir := filepath.Join(p.Views, pluralLower)
+	_ = os.MkdirAll(viewDir, 0755)
+
+	// 1. Model
+	modelPath := filepath.Join(p.Models, pascalName+".ngpk")
+	modelContent := fmt.Sprintf(`# Model %s nggo LarapakGo
+
+kelas %s extends Model
+    tabel = "%s"
+    bisa_diisi = ["id", "jeneng", "katerangan", "rega"]
+rampung
+`, pascalName, pascalName, tableName)
+	if err := os.WriteFile(modelPath, []byte(modelContent), 0644); err != nil {
+		fmt.Printf("Gagal nggawe model: %v\n", err)
+		return
+	}
+
+	// 2. Migration
+	timestamp := time.Now().Format("20060102150405")
+	migrationFile := fmt.Sprintf("%s_create_%s_table.sql", timestamp, tableName)
+	migrationPath := filepath.Join(p.Migrations, migrationFile)
+	migrationContent := fmt.Sprintf(`-- Migrasi tabel %s nggo LarapakGo
+-- Digawe: %s
+
+CREATE TABLE IF NOT EXISTS %s (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    jeneng TEXT NOT NULL,
+    katerangan TEXT,
+    rega REAL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`, tableName, time.Now().Format(time.RFC1123), tableName)
+	if err := os.WriteFile(migrationPath, []byte(migrationContent), 0644); err != nil {
+		fmt.Printf("Gagal nggawe migrasi: %v\n", err)
+		return
+	}
+
+	// 3. Controller
+	controllerPath := filepath.Join(p.Controllers, controllerName+".ngpk")
+	controllerContent := fmt.Sprintf(`# CRUD Controller %s nggo LarapakGo
+
+gawe index(req, res)
+    data = db.tabel("%s").kabeh()
+    balekna res.view("%s/index", {
+        "title": "Daptar %s",
+        "items": data
+    })
+rampung
+
+gawe create(req, res)
+    balekna res.view("%s/create", {
+        "title": "Tambah %s Anyar"
+    })
+rampung
+
+gawe store(req, res)
+    v = req.validasi({
+        "jeneng": "required|min:3"
+    })
+    nek v.fails() ya
+        balekna res.karo_input().karo_kliru(v.errors()).balek()
+    rampung
+
+    db.tabel("%s").tambah({
+        "jeneng": req.input("jeneng"),
+        "katerangan": req.input("katerangan", ""),
+        "rega": req.input("rega", 0)
+    })
+    balekna res.redirect("/%s")
+rampung
+
+gawe show(req, res)
+    id = req.param("id")
+    item = db.tabel("%s").golek(id)
+    nek item == kosong ya
+        balekna res.status(404).html("Data ora ditemokna")
+    rampung
+    balekna res.view("%s/show", {
+        "title": "Detail %s",
+        "item": item
+    })
+rampung
+
+gawe edit(req, res)
+    id = req.param("id")
+    item = db.tabel("%s").golek(id)
+    nek item == kosong ya
+        balekna res.status(404).html("Data ora ditemokna")
+    rampung
+    balekna res.view("%s/edit", {
+        "title": "Sunting %s",
+        "item": item
+    })
+rampung
+
+gawe update(req, res)
+    id = req.param("id")
+    v = req.validasi({
+        "jeneng": "required|min:3"
+    })
+    nek v.fails() ya
+        balekna res.karo_input().karo_kliru(v.errors()).balek()
+    rampung
+
+    db.tabel("%s").ngendi("id", id).nganyari({
+        "jeneng": req.input("jeneng"),
+        "katerangan": req.input("katerangan", ""),
+        "rega": req.input("rega", 0)
+    })
+    balekna res.redirect("/%s")
+rampung
+
+gawe delete(req, res)
+    id = req.param("id")
+    db.tabel("%s").ngendi("id", id).mbusak()
+    balekna res.redirect("/%s")
+rampung
+`, pascalName, tableName, pluralLower, pascalName, pluralLower, pascalName, tableName, pluralLower, tableName, pluralLower, pascalName, tableName, pluralLower, pascalName, tableName, pluralLower, tableName, pluralLower)
+
+	if err := os.WriteFile(controllerPath, []byte(controllerContent), 0644); err != nil {
+		fmt.Printf("Gagal nggawe controller: %v\n", err)
+		return
+	}
+
+	// 4. Views
+	indexViewPath := filepath.Join(viewDir, "index.nview")
+	indexViewContent := fmt.Sprintf(`@layout("layout")
+
+@section("content")
+<div class="card p-4 border rounded shadow-sm bg-white">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold">{{ title }}</h2>
+        <a href="/%s/anyar" class="btn btn-primary px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ Tambah Anyar</a>
+    </div>
+
+    <table class="w-full text-left border-collapse">
+        <thead>
+            <tr class="border-b bg-gray-50">
+                <th class="p-2">ID</th>
+                <th class="p-2">Jeneng</th>
+                <th class="p-2">Katerangan</th>
+                <th class="p-2">Rega</th>
+                <th class="p-2 text-right">Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            @each(items as item)
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-2">{{ item.id }}</td>
+                <td class="p-2 font-medium">{{ item.jeneng }}</td>
+                <td class="p-2 text-gray-600">{{ item.katerangan }}</td>
+                <td class="p-2">{{ item.rega }}</td>
+                <td class="p-2 text-right space-x-2">
+                    <a href="/%s/{{ item.id }}/sunting" class="text-blue-600 hover:underline">Sunting</a>
+                    <form action="/%s/{{ item.id }}/busak" method="POST" class="inline" onsubmit="return confirm('Yakin arep mbusak data kiye?');">
+                        <input type="hidden" name="_csrf" value="{{ _csrf }}" />
+                        <button type="submit" class="text-red-600 hover:underline">Busak</button>
+                    </form>
+                </td>
+            </tr>
+            @endeach
+        </tbody>
+    </table>
+</div>
+@endsection
+`, pluralLower, pluralLower, pluralLower)
+	_ = os.WriteFile(indexViewPath, []byte(indexViewContent), 0644)
+
+	createViewPath := filepath.Join(viewDir, "create.nview")
+	createViewContent := fmt.Sprintf(`@layout("layout")
+
+@section("content")
+<div class="card p-4 border rounded shadow-sm bg-white max-w-lg mx-auto">
+    <h2 class="text-xl font-bold mb-4">{{ title }}</h2>
+
+    <form action="/%s" method="POST">
+        <input type="hidden" name="_csrf" value="{{ _csrf }}" />
+
+        <div class="mb-3">
+            <label class="block text-sm font-medium mb-1">Jeneng *</label>
+            <input type="text" name="jeneng" value="{{ old.jeneng }}" class="w-full border px-3 py-2 rounded focus:outline-none focus:border-blue-500" placeholder="Ketik jeneng..." />
+            @error("jeneng")
+                <p class="text-red-500 text-xs mt-1">{{ message }}</p>
+            @enderror
+        </div>
+
+        <div class="mb-3">
+            <label class="block text-sm font-medium mb-1">Katerangan</label>
+            <textarea name="katerangan" rows="3" class="w-full border px-3 py-2 rounded focus:outline-none focus:border-blue-500" placeholder="Keterangan...">{{ old.katerangan }}</textarea>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-1">Rega</label>
+            <input type="number" name="rega" value="{{ old.rega }}" class="w-full border px-3 py-2 rounded focus:outline-none focus:border-blue-500" placeholder="0" />
+        </div>
+
+        <div class="flex justify-between items-center">
+            <a href="/%s" class="text-gray-600 hover:underline">Balek</a>
+            <button type="submit" class="btn btn-primary px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Simpen</button>
+        </div>
+    </form>
+</div>
+@endsection
+`, pluralLower, pluralLower)
+	_ = os.WriteFile(createViewPath, []byte(createViewContent), 0644)
+
+	editViewPath := filepath.Join(viewDir, "edit.nview")
+	editViewContent := fmt.Sprintf(`@layout("layout")
+
+@section("content")
+<div class="card p-4 border rounded shadow-sm bg-white max-w-lg mx-auto">
+    <h2 class="text-xl font-bold mb-4">{{ title }}</h2>
+
+    <form action="/%s/{{ item.id }}" method="POST">
+        <input type="hidden" name="_csrf" value="{{ _csrf }}" />
+
+        <div class="mb-3">
+            <label class="block text-sm font-medium mb-1">Jeneng *</label>
+            <input type="text" name="jeneng" value="{{ old.jeneng || item.jeneng }}" class="w-full border px-3 py-2 rounded focus:outline-none focus:border-blue-500" />
+            @error("jeneng")
+                <p class="text-red-500 text-xs mt-1">{{ message }}</p>
+            @enderror
+        </div>
+
+        <div class="mb-3">
+            <label class="block text-sm font-medium mb-1">Katerangan</label>
+            <textarea name="katerangan" rows="3" class="w-full border px-3 py-2 rounded focus:outline-none focus:border-blue-500">{{ old.katerangan || item.katerangan }}</textarea>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-1">Rega</label>
+            <input type="number" name="rega" value="{{ old.rega || item.rega }}" class="w-full border px-3 py-2 rounded focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div class="flex justify-between items-center">
+            <a href="/%s" class="text-gray-600 hover:underline">Balek</a>
+            <button type="submit" class="btn btn-primary px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Nganyari</button>
+        </div>
+    </form>
+</div>
+@endsection
+`, pluralLower, pluralLower)
+	_ = os.WriteFile(editViewPath, []byte(editViewContent), 0644)
+
+	fmt.Printf(`✓ Resource CRUD '%s' sukses digawe kabeh (100%% NgapakIn)!
+  - Model       : %s
+  - Migrasi     : %s
+  - Controller  : %s
+  - Views       : %s/ (index.nview, create.nview, edit.nview)
+
+Contohe rute sing bisa ditambahi neng routes/web.ngpk:
+  rute.get("/%s", "%s@index")
+  rute.get("/%s/anyar", "%s@create")
+  rute.post("/%s", "%s@store")
+  rute.get("/%s/{id}", "%s@show")
+  rute.get("/%s/{id}/sunting", "%s@edit")
+  rute.post("/%s/{id}", "%s@update")
+  rute.post("/%s/{id}/busak", "%s@delete")
+`, pascalName, filepath.ToSlash(modelPath), filepath.ToSlash(migrationPath), filepath.ToSlash(controllerPath), filepath.ToSlash(viewDir),
+		pluralLower, controllerName,
+		pluralLower, controllerName,
+		pluralLower, controllerName,
+		pluralLower, controllerName,
+		pluralLower, controllerName,
+		pluralLower, controllerName,
+		pluralLower, controllerName)
 }
 
 func runMigrations() {

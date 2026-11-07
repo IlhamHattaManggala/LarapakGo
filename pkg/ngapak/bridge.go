@@ -1,11 +1,15 @@
 package ngapak
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/IlhamHattaManggala/larapak-go/pkg/database"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/larapak"
@@ -13,6 +17,7 @@ import (
 	"github.com/IlhamHattaManggala/larapak-go/pkg/rikatlive"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/security"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/studio"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/validation"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/view"
 )
 
@@ -199,6 +204,186 @@ func (eng *Engine) BindRoutesWithStudio(app *larapak.App, st *studio.Studio) {
 	}
 	eng.Evaluator.Globals.Set("sandi", sandiObj)
 	eng.Evaluator.Globals.Set("hash", sandiObj)
+
+	// Bind 'env' and 'lingkungan' helper
+	envFn := func(args []any) (any, error) {
+		if len(args) == 0 {
+			return "", nil
+		}
+		key := fmt.Sprintf("%v", args[0])
+		val := os.Getenv(key)
+		if val == "" && len(args) > 1 {
+			return args[1], nil
+		}
+		return val, nil
+	}
+	eng.Evaluator.Globals.Set("env", envFn)
+	eng.Evaluator.Globals.Set("lingkungan", envFn)
+
+	// Bind 'http' native standard library client
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+	httpObj := map[string]any{
+		"get": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("http.get mbutuhna URL")
+			}
+			urlStr := fmt.Sprintf("%v", args[0])
+			req, err := http.NewRequest("GET", urlStr, nil)
+			if err != nil {
+				return nil, err
+			}
+			if len(args) > 1 {
+				if hMap, ok := args[1].(map[string]any); ok {
+					for k, v := range hMap {
+						req.Header.Set(k, fmt.Sprintf("%v", v))
+					}
+				}
+			}
+			resp, err := httpClient.Do(req)
+			if err != nil {
+				return nil, err
+			}
+			defer resp.Body.Close()
+			b, _ := io.ReadAll(resp.Body)
+			bodyStr := string(b)
+			var jsonData any
+			_ = json.Unmarshal(b, &jsonData)
+			return map[string]any{
+				"status": resp.StatusCode,
+				"ok":     resp.StatusCode >= 200 && resp.StatusCode < 300,
+				"body":   bodyStr,
+				"json":   jsonData,
+			}, nil
+		},
+		"post": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("http.post mbutuhna URL")
+			}
+			urlStr := fmt.Sprintf("%v", args[0])
+			var bodyReader io.Reader
+			contentType := "application/json"
+			if len(args) > 1 && args[1] != nil {
+				switch data := args[1].(type) {
+				case string:
+					bodyReader = strings.NewReader(data)
+					contentType = "application/x-www-form-urlencoded"
+				default:
+					jsonBytes, err := json.Marshal(data)
+					if err != nil {
+						return nil, err
+					}
+					bodyReader = bytes.NewBuffer(jsonBytes)
+				}
+			}
+			req, err := http.NewRequest("POST", urlStr, bodyReader)
+			if err != nil {
+				return nil, err
+			}
+			req.Header.Set("Content-Type", contentType)
+			if len(args) > 2 {
+				if hMap, ok := args[2].(map[string]any); ok {
+					for k, v := range hMap {
+						req.Header.Set(k, fmt.Sprintf("%v", v))
+					}
+				}
+			}
+			resp, err := httpClient.Do(req)
+			if err != nil {
+				return nil, err
+			}
+			defer resp.Body.Close()
+			b, _ := io.ReadAll(resp.Body)
+			bodyStr := string(b)
+			var jsonData any
+			_ = json.Unmarshal(b, &jsonData)
+			return map[string]any{
+				"status": resp.StatusCode,
+				"ok":     resp.StatusCode >= 200 && resp.StatusCode < 300,
+				"body":   bodyStr,
+				"json":   jsonData,
+			}, nil
+		},
+	}
+	eng.Evaluator.Globals.Set("http", httpObj)
+
+	// Bind 'validasi' and 'validate'
+	validateObj := map[string]any{
+		"make": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("validate.make requires data and rules")
+			}
+			dMap, _ := args[0].(map[string]any)
+			rMap := make(map[string]string)
+			if rawRMap, ok := args[1].(map[string]any); ok {
+				for k, val := range rawRMap {
+					rMap[k] = fmt.Sprintf("%v", val)
+				}
+			}
+			return createValidatorBridge(dMap, rMap), nil
+		},
+		"gawe": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("validasi.gawe mbutuhna data lan aturan")
+			}
+			dMap, _ := args[0].(map[string]any)
+			rMap := make(map[string]string)
+			if rawRMap, ok := args[1].(map[string]any); ok {
+				for k, val := range rawRMap {
+					rMap[k] = fmt.Sprintf("%v", val)
+				}
+			}
+			return createValidatorBridge(dMap, rMap), nil
+		},
+	}
+	eng.Evaluator.Globals.Set("validasi", validateObj)
+	eng.Evaluator.Globals.Set("validate", validateObj)
+}
+
+func createValidatorBridge(data map[string]any, rules map[string]string) map[string]any {
+	v := validation.Make(data, rules)
+	var vBridge map[string]any
+	vBridge = map[string]any{
+		"passes": func(args []any) (any, error) {
+			return v.Passes(), nil
+		},
+		"bener": func(args []any) (any, error) {
+			return v.Passes(), nil
+		},
+		"fails": func(args []any) (any, error) {
+			return v.Fails(), nil
+		},
+		"gagal": func(args []any) (any, error) {
+			return v.Fails(), nil
+		},
+		"errors": func(args []any) (any, error) {
+			res := make(map[string]any)
+			for f, errs := range v.Errors() {
+				res[f] = errs
+			}
+			return res, nil
+		},
+		"kliru": func(args []any) (any, error) {
+			res := make(map[string]any)
+			for f, errs := range v.Errors() {
+				res[f] = errs
+			}
+			return res, nil
+		},
+		"first": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return "", nil
+			}
+			return v.First(fmt.Sprintf("%v", args[0])), nil
+		},
+		"firsts": func(args []any) (any, error) {
+			res := make(map[string]any)
+			for f, msg := range v.AllFirstErrors() {
+				res[f] = msg
+			}
+			return res, nil
+		},
+	}
+	return vBridge
 }
 
 func createQueryBuilderBridge(qb *database.QueryBuilder) map[string]any {
@@ -589,6 +774,52 @@ func (eng *Engine) createContextBridge(c *larapak.Context) (map[string]any, map[
 		"kabeh": func(args []any) (any, error) {
 			return c.AllInputs(), nil
 		},
+		"validate": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("req.validate requires rules")
+			}
+			rMap := make(map[string]string)
+			if rawRMap, ok := args[0].(map[string]any); ok {
+				for k, val := range rawRMap {
+					rMap[k] = fmt.Sprintf("%v", val)
+				}
+			}
+			return createValidatorBridge(c.AllInputs(), rMap), nil
+		},
+		"validasi": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("req.validasi mbutuhna aturan validasi")
+			}
+			rMap := make(map[string]string)
+			if rawRMap, ok := args[0].(map[string]any); ok {
+				for k, val := range rawRMap {
+					rMap[k] = fmt.Sprintf("%v", val)
+				}
+			}
+			return createValidatorBridge(c.AllInputs(), rMap), nil
+		},
+		"old": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return c.AllOld(), nil
+			}
+			key := fmt.Sprintf("%v", args[0])
+			def := ""
+			if len(args) > 1 {
+				def = fmt.Sprintf("%v", args[1])
+			}
+			return c.Old(key, def), nil
+		},
+		"lawas": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return c.AllOld(), nil
+			}
+			key := fmt.Sprintf("%v", args[0])
+			def := ""
+			if len(args) > 1 {
+				def = fmt.Sprintf("%v", args[1])
+			}
+			return c.Old(key, def), nil
+		},
 		"file": func(args []any) (any, error) {
 			if len(args) == 0 {
 				return nil, fmt.Errorf("req.file mbutuhna jeneng field")
@@ -650,6 +881,21 @@ func (eng *Engine) createContextBridge(c *larapak.Context) (map[string]any, map[
 			}
 			if _, hasSess := data["session"]; !hasSess {
 				data["session"] = sess.All()
+			}
+			if _, hasOld := data["old"]; !hasOld {
+				oldData := c.AllOld()
+				data["old"] = oldData
+				data["lawas"] = oldData
+			}
+			if _, hasErrors := data["errors"]; !hasErrors {
+				rawErr := sess.GetFlash("_errors")
+				if rawErr != "" {
+					var errMap map[string]any
+					if json.Unmarshal([]byte(rawErr), &errMap) == nil {
+						data["errors"] = errMap
+						data["kliru"] = errMap
+					}
+				}
 			}
 			if _, hasCsrf := data["_csrf"]; !hasCsrf {
 				if csrfVal, ok := c.Get("_csrf"); ok {
@@ -713,6 +959,44 @@ func (eng *Engine) createContextBridge(c *larapak.Context) (map[string]any, map[
 				}
 			}
 			return nil, c.Redirect(code, targetURL)
+		},
+		"with_input": func(args []any) (any, error) {
+			c.FlashInputs()
+			return res, nil
+		},
+		"karo_input": func(args []any) (any, error) {
+			c.FlashInputs()
+			return res, nil
+		},
+		"with_errors": func(args []any) (any, error) {
+			if len(args) > 0 {
+				if b, err := json.Marshal(args[0]); err == nil {
+					sess.Flash("_errors", string(b))
+				}
+			}
+			return res, nil
+		},
+		"karo_kliru": func(args []any) (any, error) {
+			if len(args) > 0 {
+				if b, err := json.Marshal(args[0]); err == nil {
+					sess.Flash("_errors", string(b))
+				}
+			}
+			return res, nil
+		},
+		"back": func(args []any) (any, error) {
+			fallback := "/"
+			if len(args) > 0 {
+				fallback = fmt.Sprintf("%v", args[0])
+			}
+			return nil, c.Back(fallback)
+		},
+		"balek": func(args []any) (any, error) {
+			fallback := "/"
+			if len(args) > 0 {
+				fallback = fmt.Sprintf("%v", args[0])
+			}
+			return nil, c.Back(fallback)
 		},
 	}
 

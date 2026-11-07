@@ -108,8 +108,25 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
 - **Pagination Bawaan**: Kalkulasi halaman otomatis via `db.tabel("produk").kaca(1, 10)` atau `db.table(...).paginate(page, perPage)` menghasilkan total baris, jumlah halaman, dan metadata navigasi secara rapi.
 - **Schema & Migrations**: Blueprint pembangun skema tabel database (`ID()`, `String()`, `Integer()`, `Text()`, `Boolean()`, `Timestamps()`) yang otomatis beradaptasi dengan tipe data dialek target.
 
-### 6. Mesin Validasi Formulir (`pkg/validation`)
+### 6. Mesin Validasi Formulir (`pkg/validation`) & Direktif `@error`
 - Aturan validasi lengkap: `required`, `email`, `min:N`, `max:N`, `numeric`, `alpha`, `in:a,b,c`, `confirmed`.
+- **Integrasi Penuh di Controller `.ngpk`**:
+  ```python
+  v = req.validasi({
+      "jeneng": "required|min:3",
+      "email": "required|email"
+  })
+  nek v.fails() ya
+      balekna res.karo_input().karo_kliru(v.errors()).balek()
+  rampung
+  ```
+- **Direktif `@error` di Template `.nview`**:
+  ```html
+  @error("jeneng")
+      <span class="text-red-500 text-sm">{{ message }}</span>
+  @enderror
+  ```
+- **Flashing Input Formulir Lawas (`old` / `lawas`)**: Nilai input sebelumnya otomatis tersimpan di sesi dan disajikan ke template via `{{ old.jeneng }}` / `{{ lawas.jeneng }}` atau di controller via `req.old("field")` / `req.lawas("field")`. Password otomatis disaring (*safe filtering*).
 
 ### 7. Native Redis Engine, Caching & Distributed Queues (`pkg/redis`, `pkg/cache`, `pkg/queue`)
 - **Native Redis Client (100% Go Standard Library)**: Implementasi penuh protokol RESP (*REdis Serialization Protocol*) murni berbasis socket `net.Dial` dengan connection pool (`sync.Pool`), *auth*, multi-database index, tanpa butuh library pihak ketiga di `go.mod`.
@@ -135,11 +152,12 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
   - **English**: `larapak new my_app --bahasa=english`
     - Struktur: `app/Controllers`, `app/Models`, `app/Middleware`, `app/Jobs`, `database/migrations`, `database/seeders`, `resources/views/`, `routes/`, `public/`.
     - Otomatis menghasilkan `routes/web.ngpk` dan `resources/views/index.nview`.
-- Dual-support 22 perintah bahasa Inggris & dialek Ngapak:
+- Dual-support 23 perintah bahasa Inggris & dialek Ngapak:
   - `larapak new <nama>` / `larapak anyar <nama> [--bahasa=...]`
   - `larapak serve [port]` / `larapak ladeni [port]` / `urubna` / `mlaku` (dengan Auto Hot-Reload & Browser Refresh aktif otomatis)
   - `larapak route:list` / `larapak dalan:daptar` (Otomatis membaca rute aktif dari `web.ngpk`)
   - `larapak run <skrip.ngpk>` / `larapak mlakukna <skrip.ngpk>` / `larapak eksekusi <skrip.ngpk>`
+  - `larapak make:resource <Nama>` / `gawe:sumber` / `gawe:resource` (Scaffolding lengkap Model, Migrasi, CRUD Controller & Views)
   - `larapak make:controller <Nama>` / `gawe:pangatur` / `gawe:controller`
   - `larapak make:model <Nama>` / `gawe:wujud` / `gawe:model`
   - `larapak make:live <Nama>` / `gawe:urip` / `gawe:live` (Komponen Realtime RikatLive)
@@ -180,6 +198,14 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
   - **Akses Database Fluent & Pagination**: `data = db.tabel("produk").pilih("id", "jeneng", "reva").neng("status", "aktif").kaca(1, 10)`.
   - **Keamanan & Hashing**: `sandi.gawe("rahasia")` dan `sandi.cocok("rahasia", hash)` untuk modul otentikasi native.
   - **Sesi & Flash Message**: `sesi.simpen("user", 1)`, `sesi.jupuk("user")`, dan `sesi.kilat("pesan", "Kasil!")`.
+  - **Klien HTTP Standar Native (`http.get` & `http.post`)**: Konsumsi API pihak ketiga langsung dari `.ngpk`:
+    ```python
+    res = http.get("https://api.github.com/zen")
+    nek res.ok ya
+        tulis("Status: " + res.status + " Body: " + res.body)
+    rampung
+    ```
+  - **Helper Variabel Lingkungan (`env` / `lingkungan`)**: `env("APP_NAME", "LarapakGo")` atau `lingkungan("DB_DATABASE", "storage/db.sqlite")` untuk membaca berkas `.env`.
   - Otomatis tersinkronisasi ke antarmuka Route & API Studio di `/_studio`.
 
 ### 11. RikatLive — Reaktivitas Komponen Full-Stack Realtime (`pkg/rikatlive`)

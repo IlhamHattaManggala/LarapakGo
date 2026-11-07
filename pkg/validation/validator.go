@@ -131,6 +131,17 @@ func (v *Validator) First(field string) string {
 	return ""
 }
 
+// AllFirstErrors returns a map of field name to its first error message string.
+func (v *Validator) AllFirstErrors() map[string]string {
+	result := make(map[string]string, len(v.errors))
+	for f, errs := range v.errors {
+		if len(errs) > 0 {
+			result[f] = errs[0]
+		}
+	}
+	return result
+}
+
 func (v *Validator) addError(field, msg string) {
 	v.errors[field] = append(v.errors[field], msg)
 }

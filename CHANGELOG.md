@@ -59,8 +59,20 @@ Versi 1.0.0 menandai peluncuran perdana arsitektur web framework Larapak yang di
   - Blueprint perancangan skema tabel database (`ID`, `String`, `Integer`, `Text`, `Boolean`, `Timestamps`).
   - CLI migrasi database: `migrate`, `migrate:fresh`, `migrate:status`, `rollback`, dan `db:seed`.
 
-- **Mesin Validasi Formulir Input (`pkg/validation`)**:
+- **Mesin Validasi Formulir Input (`pkg/validation`) & Direktif `@error`**:
   - Aturan validasi lengkap: `required`, `email`, `min`, `max`, `numeric`, `alpha`, `in`, `confirmed`.
+  - Jembatan validasi langsung di `.ngpk` via `req.validate(...)` / `req.validasi(...)`.
+  - Direktif template `@error("field") ... @enderror` dengan variabel pesan otomatis `{{ message }}` / `{{ pesan }}`.
+  - Sesi penyimpanan input lawas (*Old Input Flashing*) via `res.with_input().with_errors(v.errors()).back()` / `res.karo_input().karo_kliru(...).balek()`.
+  - Akses input lawas di template `{{ old.field }}` / `{{ lawas.field }}` dan di controller `req.old("field")` / `req.lawas("field")`.
+
+- **Klien HTTP Standar Native & Helper Lingkungan di `.ngpk`**:
+  - Klien HTTP berbasis Go Standard Library (`http.get(url, [headers])`, `http.post(url, [data], [headers])`) mengembalikan status, body, dan parsed JSON.
+  - Helper variabel lingkungan `env(key, [default])` dan alias `lingkungan(...)` langsung dari skrip NgapakIn.
+
+- **Full Resource CRUD Generator (`make:resource` / `gawe:sumber`)**:
+  - Perintah satu langkah `larapak make:resource <Nama>` atau `larapak gawe:sumber <Nama>`.
+  - Otomatis men-generate Model (`.ngpk`), Migrasi tabel (`.sql`), CRUD Controller (`.ngpk` mencakup index, create, store, show, edit, update, delete), dan Template Views lengkap (`index.nview`, `create.nview`, `edit.nview`).
 
 - **Dual-Language CLI & Multi-Language Directory Scaffolding**:
   - Mendukung 22 pasangan perintah dalam bahasa Inggris dan dialek Ngapak Tegalan (`anyar`, `ladeni`, `dalan:daptar`, `gawe:pangatur`, `munggah`, `mudhun`, `resik:cache`, dll).

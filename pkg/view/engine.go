@@ -189,6 +189,36 @@ func (e *Engine) RenderString(content string, data map[string]any) (string, erro
 		return ""
 	})
 
+	// Handle @error("field") ... @enderror
+	errorPattern := regexp.MustCompile(`(?s)@error\s*\(\s*["']([^"']+)["']\s*\)(.*?)(?:@enderror|@rampung)`)
+	output = errorPattern.ReplaceAllStringFunc(output, func(match string) string {
+		sub := errorPattern.FindStringSubmatch(match)
+		if len(sub) > 2 {
+			field := sub[1]
+			body := sub[2]
+			var msg string
+			if errMap, ok := data["errors"].(map[string]string); ok {
+				msg = errMap[field]
+			} else if errMap, ok := data["errors"].(map[string]any); ok {
+				if v, ok := errMap[field]; ok {
+					msg = fmt.Sprintf("%v", v)
+				}
+			} else if errMap, ok := data["errors"].(map[string][]string); ok {
+				if list, ok := errMap[field]; ok && len(list) > 0 {
+					msg = list[0]
+				}
+			} else if errMap, ok := data["kliru"].(map[string]string); ok {
+				msg = errMap[field]
+			}
+			if msg != "" {
+				res := strings.ReplaceAll(body, "{{ message }}", html.EscapeString(msg))
+				res = strings.ReplaceAll(res, "{{ pesan }}", html.EscapeString(msg))
+				return res
+			}
+		}
+		return ""
+	})
+
 	// Handle RikatLive directive: @rikatlive("ComponentName") or @live("ComponentName")
 	livePattern := regexp.MustCompile(`@(?:rikatlive|live)\s*\(\s*["']([^"']+)["']\s*\)`)
 	output = livePattern.ReplaceAllStringFunc(output, func(match string) string {

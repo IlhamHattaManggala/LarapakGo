@@ -139,3 +139,42 @@ func TestEngineFlashAndSessionDirectives(t *testing.T) {
 		t.Fatalf("expected session span in output:\n%s", out)
 	}
 }
+
+func TestEngineErrorDirective(t *testing.T) {
+	engine := New("")
+	tmpl := `<div class="form-group">
+    @error("email")
+    <span class="text-red-500">{{ message }}</span>
+    @enderror
+
+    @error("password")
+    <span class="text-red-500">{{ pesan }}</span>
+    @enderror
+
+    @error("nama")
+    <span class="text-red-500">{{ message }}</span>
+    @enderror
+</div>`
+
+	data := map[string]any{
+		"errors": map[string]string{
+			"email":    "Email kudu diisi!",
+			"password": "Password kurang dawa!",
+		},
+	}
+
+	out, err := engine.RenderString(tmpl, data)
+	if err != nil {
+		t.Fatalf("failed to render @error directive: %v", err)
+	}
+
+	if !strings.Contains(out, `<span class="text-red-500">Email kudu diisi!</span>`) {
+		t.Fatalf("expected email error in output:\n%s", out)
+	}
+	if !strings.Contains(out, `<span class="text-red-500">Password kurang dawa!</span>`) {
+		t.Fatalf("expected password error in output:\n%s", out)
+	}
+	if strings.Contains(out, "nama") {
+		t.Fatalf("expected no nama error rendered, but got:\n%s", out)
+	}
+}

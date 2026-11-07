@@ -258,3 +258,56 @@ func (c *Context) AllInputs() map[string]any {
 func (c *Context) Session() *session.Session {
 	return session.DefaultManager().Start(c.Writer, c.Request)
 }
+
+// FlashInputs stores all current request inputs into session flash for the next request.
+func (c *Context) FlashInputs() {
+	inputs := c.AllInputs()
+	safeInputs := make(map[string]any, len(inputs))
+	for k, v := range inputs {
+		lower := strings.ToLower(k)
+		if strings.Contains(lower, "password") || strings.Contains(lower, "sandi") || strings.Contains(lower, "secret") {
+			continue
+		}
+		safeInputs[k] = v
+	}
+	if b, err := json.Marshal(safeInputs); err == nil {
+		c.Session().Flash("_old_input", string(b))
+	}
+}
+
+// AllOld retrieves all flashed old form inputs from the previous request.
+func (c *Context) AllOld() map[string]any {
+	raw := c.Session().GetFlash("_old_input")
+	if raw == "" {
+		return make(map[string]any)
+	}
+	var res map[string]any
+	if err := json.Unmarshal([]byte(raw), &res); err != nil {
+		return make(map[string]any)
+	}
+	return res
+}
+
+// Old retrieves a single flashed input value from previous request with optional default.
+func (c *Context) Old(key string, fallback ...string) string {
+	oldInputs := c.AllOld()
+	if val, ok := oldInputs[key]; ok {
+		return fmt.Sprintf("%v", val)
+	}
+	if len(fallback) > 0 {
+		return fallback[0]
+	}
+	return ""
+}
+
+// Back redirects the user to the HTTP Referer URL, or to the provided fallback (default "/").
+func (c *Context) Back(fallback ...string) error {
+	ref := c.Request.Referer()
+	if ref == "" {
+		ref = "/"
+		if len(fallback) > 0 && fallback[0] != "" {
+			ref = fallback[0]
+		}
+	}
+	return c.Redirect(http.StatusFound, ref)
+}

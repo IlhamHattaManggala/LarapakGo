@@ -17,3 +17,8 @@ bin/
 .vscode/
 *.swp
 
+# Storage & Logs
+storage/
+*.log
+
+

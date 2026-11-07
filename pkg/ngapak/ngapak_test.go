@@ -332,4 +332,125 @@ rampung)
 	}
 }
 
+func TestEnvHelperInNgapak(t *testing.T) {
+	os.Setenv("LARAPAK_TEST_KEY", "banyumas_mendoan")
+	defer os.Unsetenv("LARAPAK_TEST_KEY")
+
+	vEngine := view.New(t.TempDir())
+	ngpkEngine := NewEngine(t.TempDir(), vEngine)
+	app := larapak.New()
+	ngpkEngine.BindRoutes(app)
+
+	script := `
+val1 = env("LARAPAK_TEST_KEY", "standar")
+val2 = env("KEY_ORA_ANA", "standar_fallback")
+val3 = lingkungan("LARAPAK_TEST_KEY")
+`
+	_, err := ngpkEngine.RunSource(script, "env_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource env test failed: %v", err)
+	}
+
+	if v, _ := ngpkEngine.Evaluator.Globals.Get("val1"); v != "banyumas_mendoan" {
+		t.Errorf("expected banyumas_mendoan, got: %v", v)
+	}
+	if v, _ := ngpkEngine.Evaluator.Globals.Get("val2"); v != "standar_fallback" {
+		t.Errorf("expected standar_fallback, got: %v", v)
+	}
+	if v, _ := ngpkEngine.Evaluator.Globals.Get("val3"); v != "banyumas_mendoan" {
+		t.Errorf("expected banyumas_mendoan, got: %v", v)
+	}
+}
+
+func TestNativeHttpClientInNgapak(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"status":"sukses","pesan":"halo saka test server"}`))
+			return
+		}
+		if r.Method == "POST" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+			w.Write([]byte(`{"digawe":true}`))
+			return
+		}
+	}))
+	defer ts.Close()
+
+	vEngine := view.New(t.TempDir())
+	ngpkEngine := NewEngine(t.TempDir(), vEngine)
+	app := larapak.New()
+	ngpkEngine.BindRoutes(app)
+
+	script := `
+respGet = http.get("` + ts.URL + `")
+statusGet = respGet.status
+okGet = respGet.ok
+
+respPost = http.post("` + ts.URL + `", {"item": "mendoan"})
+statusPost = respPost.status
+okPost = respPost.ok
+`
+	_, err := ngpkEngine.RunSource(script, "http_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource http test failed: %v", err)
+	}
+
+	if s, _ := ngpkEngine.Evaluator.Globals.Get("statusGet"); s != 200 {
+		t.Errorf("expected statusGet 200, got %v", s)
+	}
+	if ok, _ := ngpkEngine.Evaluator.Globals.Get("okGet"); ok != true {
+		t.Errorf("expected okGet true, got %v", ok)
+	}
+	if s, _ := ngpkEngine.Evaluator.Globals.Get("statusPost"); s != 201 {
+		t.Errorf("expected statusPost 201, got %v", s)
+	}
+	if ok, _ := ngpkEngine.Evaluator.Globals.Get("okPost"); ok != true {
+		t.Errorf("expected okPost true, got %v", ok)
+	}
+}
+
+func TestValidationAndOldInputInNgapak(t *testing.T) {
+	tmpDir := t.TempDir()
+	app := larapak.New()
+	vEngine := view.New(tmpDir)
+	ngpkEngine := NewEngine(tmpDir, vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	script := `
+rute.post("/daftar", gawe(req, res)
+    v = req.validasi({
+        "jeneng": "required|min:3",
+        "email": "required|email"
+    })
+    nek v.fails() ya
+        balekna res.karo_input().karo_kliru(v.errors()).balek("/formulir")
+    rampung
+    balekna res.json({"status": "sukses"})
+rampung)
+`
+	_, err := ngpkEngine.RunSource(script, "validasi_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource validasi test failed: %v", err)
+	}
+
+	// Submit invalid POST (jeneng is empty)
+	form := strings.NewReader("jeneng=&email=dudu-email")
+	req := httptest.NewRequest("POST", "/daftar", form)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Referer", "/formulir")
+	w := httptest.NewRecorder()
+	app.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Errorf("expected 302 Found, got: %d", w.Code)
+	}
+	if w.Header().Get("Location") != "/formulir" {
+		t.Errorf("expected Location /formulir, got: %s", w.Header().Get("Location"))
+	}
+}
+
+
 
