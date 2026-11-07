@@ -42,6 +42,48 @@
       "{!! ${1:rawHtml} !!}"
     ],
     "description": "Interpolasi variabel HTML mentah {!! raw !!}"
+  },
+  "RikatLive Component Directive": {
+    "prefix": "live",
+    "body": [
+      "@live(\"${1:Counter}\")"
+    ],
+    "description": "Render komponen reaktif RikatLive @live('Nama')"
+  },
+  "Rikat Model Two-Way Binding": {
+    "prefix": "r:model",
+    "body": [
+      "r-model=\"${1:field}\""
+    ],
+    "description": "Two-way data binding input otomatis RikatLive"
+  },
+  "Rikat Click Action Trigger": {
+    "prefix": "r:click",
+    "body": [
+      "r-click=\"${1:tambah}(${2:1})\""
+    ],
+    "description": "Panggil aksi server asinkron pas diklik"
+  },
+  "Rikat Form Submit Trigger": {
+    "prefix": "r:submit",
+    "body": [
+      "r-submit=\"${1:simpen}\""
+    ],
+    "description": "Intersepsi pengiriman formulir realtime RikatLive"
+  },
+  "Rikat Loading Indicator": {
+    "prefix": "r:loading",
+    "body": [
+      "r-loading"
+    ],
+    "description": "Indikator loading otomatis nalika request AJAX lumaku"
+  },
+  "Rikat Background Polling": {
+    "prefix": "r:poll",
+    "body": [
+      "r-poll=\"${1:2s}:${2:refresh}\""
+    ],
+    "description": "Pembaruan data berkala neng latar mburi tanpa reload"
   }
 }
 

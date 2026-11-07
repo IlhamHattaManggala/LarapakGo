@@ -87,3 +87,44 @@ func TestRouteGrouping(t *testing.T) {
 	}
 }
 
+func TestFormInputsAndRedirect(t *testing.T) {
+	app := New()
+
+	app.POST("/submit", func(c *Context) error {
+		name := c.FormValue("name")
+		if name == "admin" {
+			return c.Redirect(http.StatusSeeOther, "/admin/dashboard")
+		}
+		inputs := c.AllInputs()
+		return c.JSON(http.StatusOK, inputs)
+	})
+
+	app.SetNotFoundHandler(func(c *Context) error {
+		return c.String(http.StatusNotFound, "Kustom 404: %s", c.Path())
+	})
+
+	// 1. Test Redirect
+	req := httptest.NewRequest(http.MethodPost, "/submit?name=admin", nil)
+	w := httptest.NewRecorder()
+	app.ServeHTTP(w, req)
+
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 See Other, got: %d", w.Code)
+	}
+	if w.Header().Get("Location") != "/admin/dashboard" {
+		t.Fatalf("expected Location /admin/dashboard, got: %s", w.Header().Get("Location"))
+	}
+
+	// 2. Test Custom 404
+	req404 := httptest.NewRequest(http.MethodGet, "/kaca-ilang", nil)
+	w404 := httptest.NewRecorder()
+	app.ServeHTTP(w404, req404)
+
+	if w404.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got: %d", w404.Code)
+	}
+	if w404.Body.String() != "Kustom 404: /kaca-ilang" {
+		t.Fatalf("unexpected 404 body: %s", w404.Body.String())
+	}
+}
+

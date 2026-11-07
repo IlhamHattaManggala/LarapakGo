@@ -7,11 +7,17 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
+
+	"github.com/IlhamHattaManggala/larapak-go/pkg/rikatlive"
 )
 
 // Engine parses and renders Rikat .nview and .html templates.
 type Engine struct {
-	viewsDir string
+	viewsDir     string
+	cacheEnabled bool
+	cacheMu      sync.RWMutex
+	cache        map[string]string
 }
 
 // New creates a new Rikat Template Engine pointing to the views directory.
@@ -19,18 +25,55 @@ func New(viewsDir string) *Engine {
 	if viewsDir == "" {
 		viewsDir = "resources/views"
 	}
-	return &Engine{viewsDir: viewsDir}
+	cacheEnabled := strings.ToLower(os.Getenv("APP_ENV")) == "production"
+	return &Engine{
+		viewsDir:     viewsDir,
+		cacheEnabled: cacheEnabled,
+		cache:        make(map[string]string),
+	}
+}
+
+// EnableCache explicitly enables or disables in-memory template caching.
+func (e *Engine) EnableCache(enable bool) {
+	e.cacheMu.Lock()
+	defer e.cacheMu.Unlock()
+	e.cacheEnabled = enable
+	if !enable {
+		e.cache = make(map[string]string)
+	}
+}
+
+// ClearCache flushes the in-memory template cache.
+func (e *Engine) ClearCache() {
+	e.cacheMu.Lock()
+	defer e.cacheMu.Unlock()
+	e.cache = make(map[string]string)
 }
 
 // RenderTemplate parses a template file with given layout inheritance and data.
 func (e *Engine) RenderTemplate(viewName string, data map[string]any) (string, error) {
-	filePath := e.resolveViewPath(viewName)
-	rawBytes, err := os.ReadFile(filePath)
-	if err != nil {
-		return "", fmt.Errorf("cithakan ora ditemokna: %s (%w)", filePath, err)
+	var content string
+
+	e.cacheMu.RLock()
+	cached, isCached := e.cache[viewName]
+	e.cacheMu.RUnlock()
+
+	if isCached && e.cacheEnabled {
+		content = cached
+	} else {
+		filePath := e.resolveViewPath(viewName)
+		rawBytes, err := os.ReadFile(filePath)
+		if err != nil {
+			return "", fmt.Errorf("cithakan ora ditemokna: %s (%w)", filePath, err)
+		}
+		content = string(rawBytes)
+		if e.cacheEnabled {
+			e.cacheMu.Lock()
+			e.cache[viewName] = content
+			e.cacheMu.Unlock()
+		}
 	}
 
-	content := string(rawBytes)
 	return e.RenderString(content, data)
 }
 
@@ -96,6 +139,70 @@ func (e *Engine) RenderString(content string, data map[string]any) (string, erro
 	csrfTag := fmt.Sprintf(`<input type="hidden" name="_csrf" value="%s">`, html.EscapeString(csrfToken))
 	output = strings.ReplaceAll(output, "@csrf", csrfTag)
 
+	// Handle @flash("key") ... @endflash
+	flashPattern := regexp.MustCompile(`(?s)@flash\s*\(\s*["']([^"']+)["']\s*\)(.*?)(?:@endflash|@rampung)`)
+	output = flashPattern.ReplaceAllStringFunc(output, func(match string) string {
+		sub := flashPattern.FindStringSubmatch(match)
+		if len(sub) > 2 {
+			key := sub[1]
+			body := sub[2]
+			var msg string
+			if flashMap, ok := data["flash"].(map[string]string); ok {
+				msg = flashMap[key]
+			} else if flashMap, ok := data["flash"].(map[string]any); ok {
+				if v, ok := flashMap[key]; ok {
+					msg = fmt.Sprintf("%v", v)
+				}
+			} else if val, ok := data[key]; ok {
+				msg = fmt.Sprintf("%v", val)
+			}
+			if msg != "" {
+				res := strings.ReplaceAll(body, "{{ message }}", html.EscapeString(msg))
+				res = strings.ReplaceAll(res, "{{ pesan }}", html.EscapeString(msg))
+				return res
+			}
+		}
+		return ""
+	})
+
+	// Handle @session("key") ... @endsession
+	sessionPattern := regexp.MustCompile(`(?s)@session\s*\(\s*["']([^"']+)["']\s*\)(.*?)(?:@endsession|@rampung)`)
+	output = sessionPattern.ReplaceAllStringFunc(output, func(match string) string {
+		sub := sessionPattern.FindStringSubmatch(match)
+		if len(sub) > 2 {
+			key := sub[1]
+			body := sub[2]
+			var valStr string
+			if sessMap, ok := data["session"].(map[string]any); ok {
+				if v, ok := sessMap[key]; ok {
+					valStr = fmt.Sprintf("%v", v)
+				}
+			} else if val, ok := data[key]; ok {
+				valStr = fmt.Sprintf("%v", val)
+			}
+			if valStr != "" {
+				res := strings.ReplaceAll(body, "{{ value }}", html.EscapeString(valStr))
+				res = strings.ReplaceAll(res, "{{ nilai }}", html.EscapeString(valStr))
+				return res
+			}
+		}
+		return ""
+	})
+
+	// Handle RikatLive directive: @rikatlive("ComponentName") or @live("ComponentName")
+	livePattern := regexp.MustCompile(`@(?:rikatlive|live)\s*\(\s*["']([^"']+)["']\s*\)`)
+	output = livePattern.ReplaceAllStringFunc(output, func(match string) string {
+		sub := livePattern.FindStringSubmatch(match)
+		if len(sub) > 1 {
+			rendered, err := rikatlive.RenderInitial(sub[1])
+			if err == nil {
+				return rendered
+			}
+			return fmt.Sprintf("<!-- RikatLive Error: %v -->", err)
+		}
+		return match
+	})
+
 	// Replace raw unescaped interpolations: {!! variable !!}
 	rawPattern := regexp.MustCompile(`\{!!\s*([a-zA-Z0-9_.]+)\s*!!\}`)
 	output = rawPattern.ReplaceAllStringFunc(output, func(match string) string {
@@ -119,6 +226,13 @@ func (e *Engine) RenderString(content string, data map[string]any) (string, erro
 	})
 
 	return output, nil
+}
+
+// HasTemplate checks whether a template file exists in the views directory.
+func (e *Engine) HasTemplate(name string) bool {
+	filePath := e.resolveViewPath(name)
+	_, err := os.Stat(filePath)
+	return err == nil
 }
 
 func (e *Engine) resolveViewPath(name string) string {

@@ -77,34 +77,54 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
 ### 1. HTTP Core & Router (`pkg/larapak`)
 - **Trie / Parameterized Router**: Mendukung rute dinamis (`:id`, `*filepath`), route grouping (`app.Group()`), dan middleware chaining.
 - **Context API Ekspresif**: Helper praktis `c.JSON()`, `c.HTML()`, `c.String()`, `c.BindJSON()`, `c.Param()`, `c.Query()`, `c.Header()`.
-- **Middleware Terintegrasi**: Logger nanodetik, Panic Recovery otomatis, dan CORS handler.
+- **Form Inputs & Redirects**: `c.FormValue("nama")`, `c.PostForm("email")`, `c.AllInputs()`, dan `c.Redirect(code, targetURL)`.
+- **Penanganan Unggah Berkas (File Uploads)**: Fungsi `c.FormFile("berkas")`, `c.SaveUploadedFile(fileHeader, tujuan)`, dan parsing multipart form yang aman.
+- **Middleware Terintegrasi & Structured Logging**: Logger nanodetik, Panic Recovery otomatis, CORS handler, serta penulisan log terstruktur dan stack trace ke `storage/logs/larapak.log`.
 
 ### 2. Mesin Template Rikat Go (`pkg/view`)
 - **Pewarisan Layout**: Mendukung `@layout`, `@section`, dan `@yield`.
 - **Proteksi XSS Otomatis**: Interpolasi aman `{{ var }}` dengan auto-escaping, dan `{!! raw !!}` untuk HTML mentah.
 - **Direktif CSRF**: `@csrf` otomatis menghasilkan input token hidden.
+- **Pesan Kilat & Sesi**: Direktif `@flash("pesan") ... @endflash` (dengan variabel bawaan `{{ message }}` / `{{ pesan }}`) dan `@session("user") ... @endsession` (`{{ value }}` / `{{ nilai }}`).
+- **Smart In-Memory Template Cache**: Optimasi render secepat kilat pada environment produksi (`APP_ENV=production`) dengan cache thread-safe (`sync.RWMutex`), serta auto-invalidation instan pada mode pengembangan.
 
 ### 3. Keamanan & Sandi (`pkg/security`)
 - **Auto-CSRF Protection**: Token 32-byte kriptografis aman, validasi *constant-time* anti-timing attack, dan pengecualian rute aman.
 - **Password Hasher PBKDF2-SHA256**: Enkripsi password standar RFC 2898 tanpa butuh CGo/library eksternal (`HashPassword`, `VerifyPassword`, `NeedsRehash`).
+- **Jembatan Sandi di .ngpk**: Fungsi global `sandi.gawe(pass)` / `hash.make(pass)` dan `sandi.cocok(pass, hash)` / `hash.check(pass, hash)` untuk sistem auth login/register native di NgapakIn.
 
 ### 4. Manajemen Sesi (`pkg/session`)
 - **Signed Session Cookies**: Cookie sesi terenkripsi HMAC-SHA256 untuk mencegah *cookie tampering*.
-- **Pesan Kilat (*Flash Messages*)**: Penyimpanan notifikasi satu kali baca untuk respon redirect pengguna.
+- **Pesan Kilat (*Flash Messages*)**: Penyimpanan notifikasi satu kali baca (`sesi.kilat("pesan", "...")` / `session.flash(...)`) untuk respon redirect pengguna.
+- **Akses Sesi di .ngpk**: Objek `sesi.simpen(...)`, `sesi.jupuk(...)`, `sesi.busak(...)`, `sesi.kilat(...)`.
 
-### 5. Fluent Query Builder & Migrasi Database (`pkg/database`)
-- **Query Builder**: Sintaks deklaratif `Table("users").Select(...).Where(...).OrderBy(...).Limit(...).ToSelectSQL()`.
-- **Schema & Migrations**: Blueprint pembangun skema tabel database (`ID()`, `String()`, `Integer()`, `Text()`, `Boolean()`, `Timestamps()`).
+### 5. Multi-Database Manager, SQL Dialect Transformer & Migrasi (`pkg/database`)
+- **Multi-Connection Manager**: Mendukung banyak koneksi database sekaligus dalam satu aplikasi (`GetConnection("mysql")`, `GetConnection("pgsql")`, dll.).
+- **SQL Dialect Transformer Otomatis**: Mendukung sintaks dialek khusus SQLite, MySQL/MariaDB, PostgreSQL, dan SQL Server (MSSQL).
+- **Fluent Query Builder & Executor**: Sintaks deklaratif chaining:
+  - Dialek Ngapak: `db.tabel("users").pilih("id", "jeneng").neng("aktif", 1).urut("id", "DESC").wates(10).jupuk()`
+  - Dialek Internasional: `db.table("users").select(...).where(...).orderBy(...).limit(...).get()`
+  - Eksekusi DML & Agregasi: `siji()` / `first()`, `cacah()` / `count()`, `tambah()` / `insert()`, `owahi()` / `update()`, `busak()` / `delete()`.
+- **Pagination Bawaan**: Kalkulasi halaman otomatis via `db.tabel("produk").kaca(1, 10)` atau `db.table(...).paginate(page, perPage)` menghasilkan total baris, jumlah halaman, dan metadata navigasi secara rapi.
+- **Schema & Migrations**: Blueprint pembangun skema tabel database (`ID()`, `String()`, `Integer()`, `Text()`, `Boolean()`, `Timestamps()`) yang otomatis beradaptasi dengan tipe data dialek target.
 
 ### 6. Mesin Validasi Formulir (`pkg/validation`)
 - Aturan validasi lengkap: `required`, `email`, `min:N`, `max:N`, `numeric`, `alpha`, `in:a,b,c`, `confirmed`.
 
-### 7. Route & API Studio Bawaan (`pkg/studio`)
+### 7. Native Redis Engine, Caching & Distributed Queues (`pkg/redis`, `pkg/cache`, `pkg/queue`)
+- **Native Redis Client (100% Go Standard Library)**: Implementasi penuh protokol RESP (*REdis Serialization Protocol*) murni berbasis socket `net.Dial` dengan connection pool (`sync.Pool`), *auth*, multi-database index, tanpa butuh library pihak ketiga di `go.mod`.
+- **Fleksibel Caching (`pkg/cache`)**: Dukungan driver terpadu `CACHE_DRIVER=memory|redis`. Fitur `Get()`, `Set(key, val, ttl)`, `Delete()`, dan `Flush()`.
+- **Distributed Job Queues (`pkg/queue`)**: Pemrosesan antrean latar belakang `QUEUE_DRIVER=memory|redis` dengan metode non-busy-waiting `BRPOP` yang hemat CPU untuk arsitektur multi-server/multi-worker.
+
+### 8. Route & API Studio Bawaan (`pkg/studio`)
 - Antarmuka GUI interaktif Route & API Studio di `/_studio` dengan palet tema modern gelap dan **100% SVG icons** (tanpa emoticon).
 - Live testing request HTTP & pratinjau respons.
 - Ekspor otomatis ke spesifikasi standar **OpenAPI 3.0.3** JSON di `/_studio/openapi.json`.
 
-### 8. CLI & Multi-Language Directory Scaffolding (`cmd/larapak` & `pkg/paths`)
+### 9. CLI, Auto Hot-Reload & Browser Live-Refresh (`cmd/larapak` & `pkg/paths`)
+- **Auto Hot-Reload Bawaan (Default)**: Perintah `larapak serve [port]` (atau `larapak ladeni`) kini **secara otomatis memantau seluruh perubahan file** skrip `.ngpk`, template `.nview`, konfigurasi `.env`, CSS, dan JS. Setiap kali berkas disimpan, server me-reload router dan template engine dalam memori (< 10ms) **tanpa memutus port socket TCP** dan tanpa perlu argumen `--watch` tambahan!
+- **Browser Live-Reload Otomatis (SSE)**: Dilengkapi koneksi Server-Sent Events (SSE) bawaan di mode dev; setiap kali berkas disimpan, tab browser Anda **langsung me-refresh halamannya secara otomatis** tanpa perlu menekan tombol F5!
+- **Halaman Error Kustom (404 & 500)**: Otomatis mendeteksi dan me-render berkas template kustom `sawangan/errors/404.nview` dan `500.nview` jika dibuat oleh pengguna.
 - Dukungan pembuatan proyek dengan tag bahasa `--bahasa=ngapak|indonesia|english` (sama persis dengan versi Python):
   - **Ngapak**: `larapak anyar toko_online --bahasa=ngapak`
     - Struktur: `jeroan/Pangatur`, `jeroan/Wujud`, `jeroan/Pencegat`, `jeroan/Gawean`, `lumbung/owahan`, `lumbung/bibit`, `sawangan/`, `dalan/`, `njobo/`.
@@ -117,11 +137,12 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
     - Otomatis menghasilkan `routes/web.ngpk` dan `resources/views/index.nview`.
 - Dual-support 22 perintah bahasa Inggris & dialek Ngapak:
   - `larapak new <nama>` / `larapak anyar <nama> [--bahasa=...]`
-  - `larapak serve [port]` / `larapak ladeni [port]` / `urubna` / `mlaku`
+  - `larapak serve [port]` / `larapak ladeni [port]` / `urubna` / `mlaku` (dengan Auto Hot-Reload & Browser Refresh aktif otomatis)
   - `larapak route:list` / `larapak dalan:daptar` (Otomatis membaca rute aktif dari `web.ngpk`)
   - `larapak run <skrip.ngpk>` / `larapak mlakukna <skrip.ngpk>` / `larapak eksekusi <skrip.ngpk>`
   - `larapak make:controller <Nama>` / `gawe:pangatur` / `gawe:controller`
   - `larapak make:model <Nama>` / `gawe:wujud` / `gawe:model`
+  - `larapak make:live <Nama>` / `gawe:urip` / `gawe:live` (Komponen Realtime RikatLive)
   - `larapak make:middleware <Nama>` / `gawe:pencegat` / `gawe:middleware`
   - `larapak make:migration <Nama>` / `gawe:migrasi`
   - `larapak make:job <Nama>` / `gawe:gawean`
@@ -137,7 +158,7 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
   - `larapak test` / `larapak coba`
   - `larapak help` / `larapak tulung`
 
-### 9. Mesin Interpreter Native NgapakIn (`.ngpk`) & Sawangan (`.nview`) (`pkg/ngapak`)
+### 10. Mesin Interpreter Native NgapakIn (`.ngpk`) & Sawangan (`.nview`) (`pkg/ngapak`)
 - **Native Go Interpreter (Tanpa Python & Tanpa CGo)**:
   - Dilengkapi Lexer, Parser, AST, dan Tree-Walk Evaluator mandiri berbasis 100% Go Standard Library.
   - Latency eksekusi sub-milidetik (< 0.5 ms) dengan konsumsi RAM sangat hemat (~10-20 MB).
@@ -152,8 +173,27 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
   - `rute.post("/api/simpen", "ProdukController@simpen")`
   - `res.view("index", {"judul": "..."})` untuk me-render template `.nview` secara instan.
   - `res.json({"status": "sukses"})` untuk API respons.
+  - `res.redirect("/tujuan")` / `res.alurna("/tujuan")` untuk redirect HTTP.
+  - `req.input("field")` / `req.isi("field")` dan `req.all()` / `req.kabeh()` untuk membaca data form & query.
   - `req.params["id"]`, `req.query("cari")`, `req.method`.
+  - **Unggah Berkas**: `file = req.file("foto")` atau `req.berkas("foto")` lalu `file.save("storage/uploads/" + file.name)`.
+  - **Akses Database Fluent & Pagination**: `data = db.tabel("produk").pilih("id", "jeneng", "reva").neng("status", "aktif").kaca(1, 10)`.
+  - **Keamanan & Hashing**: `sandi.gawe("rahasia")` dan `sandi.cocok("rahasia", hash)` untuk modul otentikasi native.
+  - **Sesi & Flash Message**: `sesi.simpen("user", 1)`, `sesi.jupuk("user")`, dan `sesi.kilat("pesan", "Kasil!")`.
   - Otomatis tersinkronisasi ke antarmuka Route & API Studio di `/_studio`.
+
+### 11. RikatLive — Reaktivitas Komponen Full-Stack Realtime (`pkg/rikatlive`)
+- **100% Zero File `.go` di Proyek Pengguna**: Developer tidak perlu menyentuh atau menulis kode Go sama sekali di dalam proyek Larapak. Logika komponen ditulis murni dengan skrip NgapakIn (`.ngpk`) di folder `jeroan/Urip/` (atau `app/Live/`) dan tampilan template di `sawangan/live/` (`.nview`).
+- **CLI Generator Cepat**: Jalankan `larapak gawe:urip Counter` atau `larapak make:live Counter` untuk men-generate file logika `.ngpk` dan template `.nview` secara otomatis.
+- **Under-the-Hood Engine**: Mesin RikatLive di dalam binary Go menangani eksekusi AST NgapakIn, two-way state binding, snapshot kriptografis HMAC-SHA256 anti-tampering, dan routing `POST /_rikat/live` secara transparan.
+- **Direktif Template Sederhana**: Cukup pasang `@rikatlive("NamaKomponen")` atau alias praktis `@live("NamaKomponen")` di berkas template `.nview`.
+- **Rikat.js DOM Morphing Runtime**:
+  - `r-click="method(arg)"`: Trigger aksi server secara asinkron tanpa reload halaman.
+  - `r-model="field"`: Sinkronisasi dua arah (*two-way binding*) data input dengan server secara otomatis.
+  - `r-submit="method"`: Intersepsi form submission dengan AJAX realtime.
+  - `r-loading`: Menampilkan status/indikator loading secara otomatis saat request sedang diproses.
+  - `r-poll="2s:method"`: Pembaruan data berkala (*background polling*) tanpa reload.
+  - Algoritma DOM Morphing cerdas mempertahankan fokus kursor pengguna, status seleksi, dan posisi scroll secara mulus.
 
 ---
 
@@ -231,8 +271,12 @@ LarapakGo/
 └── pkg/
     ├── larapak/               # Application, Context, Router, Middleware
     ├── ngapak/                # Interpreter Native NgapakIn (.ngpk) & Runtime Bridge
-    ├── view/                  # Rikat/Sawangan Go Template Engine (.nview, @layout)
-    ├── database/              # Fluent Query Builder & Migration Blueprint
+    ├── view/                  # Rikat/Sawangan Go Template Engine (.nview, @layout, @live)
+    ├── database/              # Fluent Query Builder, Multi-DB Manager & Dialects (SQLite, MySQL, Postgres, MSSQL)
+    ├── rikatlive/             # RikatLive Reactive Component Engine, HMAC State Protection & Dispatcher
+    ├── redis/                 # Native Redis Client (RESP protocol 100% Go StdLib)
+    ├── cache/                 # Cache Engine (Memory & Redis auto-driver)
+    ├── queue/                 # Distributed Queue & BRPOP Worker Engine
     ├── security/              # CSRF Protection & PBKDF2 Password Hashing
     ├── session/               # Encrypted Sessions & Flash Messages
     ├── validation/            # Input & Form Validation Engine

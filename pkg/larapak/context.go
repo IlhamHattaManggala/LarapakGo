@@ -1,11 +1,18 @@
 package larapak
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/IlhamHattaManggala/larapak-go/pkg/session"
 )
 
 // HandlerFunc defines the request handler signature in LarapakGo.
@@ -131,4 +138,123 @@ func (c *Context) Path() string {
 // IsAJAX checks if the request is an XMLHttpRequest / fetch.
 func (c *Context) IsAJAX() bool {
 	return strings.ToLower(c.Request.Header.Get("X-Requested-With")) == "xmlhttprequest"
+}
+
+// MultipartForm parses and returns the multipart form (max 32MB by default).
+func (c *Context) MultipartForm() (*multipart.Form, error) {
+	if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
+		return nil, err
+	}
+	return c.Request.MultipartForm, nil
+}
+
+// FormFile returns the first file uploaded for the provided form key.
+func (c *Context) FormFile(name string) (*multipart.FileHeader, error) {
+	if c.Request.MultipartForm == nil {
+		if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
+			return nil, err
+		}
+	}
+	f, fh, err := c.Request.FormFile(name)
+	if err != nil {
+		return nil, err
+	}
+	_ = f.Close()
+	return fh, nil
+}
+
+// SaveUploadedFile saves an uploaded file header to the destination filepath.
+func (c *Context) SaveUploadedFile(file *multipart.FileHeader, dst string) error {
+	src, err := file.Open()
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return err
+	}
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, src)
+	return err
+}
+
+// FormValue retrieves a form value from POST body or query string.
+func (c *Context) FormValue(key string) string {
+	return c.Request.FormValue(key)
+}
+
+// PostForm retrieves a form value from the POST/PUT body.
+func (c *Context) PostForm(key string) string {
+	return c.Request.PostFormValue(key)
+}
+
+// PostFormDefault retrieves a POST form value with a fallback default.
+func (c *Context) PostFormDefault(key, defaultValue string) string {
+	val := c.PostForm(key)
+	if val == "" {
+		return defaultValue
+	}
+	return val
+}
+
+// Redirect redirects the request to a given target URL with status code (default 302 Found).
+func (c *Context) Redirect(code int, targetURL string) error {
+	if code < 300 || code > 308 {
+		code = http.StatusFound
+	}
+	c.statusCode = code
+	http.Redirect(c.Writer, c.Request, targetURL, code)
+	return nil
+}
+
+// AllInputs collects all request inputs (Query parameters, Form fields, and JSON body).
+func (c *Context) AllInputs() map[string]any {
+	inputs := make(map[string]any)
+
+	// 1. URL Query parameters
+	for k, v := range c.Request.URL.Query() {
+		if len(v) == 1 {
+			inputs[k] = v[0]
+		} else {
+			inputs[k] = v
+		}
+	}
+
+	// 2. Form values (POST / PUT / multipart)
+	_ = c.Request.ParseMultipartForm(32 << 20)
+	for k, v := range c.Request.PostForm {
+		if len(v) == 1 {
+			inputs[k] = v[0]
+		} else {
+			inputs[k] = v
+		}
+	}
+
+	// 3. JSON body if Content-Type is application/json
+	if strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") && c.Request.Body != nil {
+		var jsonData map[string]any
+		bodyBytes, err := io.ReadAll(c.Request.Body)
+		if err == nil && len(bodyBytes) > 0 {
+			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			if json.Unmarshal(bodyBytes, &jsonData) == nil {
+				for k, v := range jsonData {
+					inputs[k] = v
+				}
+			}
+		}
+	}
+
+	return inputs
+}
+
+// Session returns the active session container for this request.
+func (c *Context) Session() *session.Session {
+	return session.DefaultManager().Start(c.Writer, c.Request)
 }

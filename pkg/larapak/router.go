@@ -41,6 +41,13 @@ func (r *Router) Use(m ...MiddlewareFunc) {
 	r.middlewares = append(r.middlewares, m...)
 }
 
+// SetNotFoundHandler overrides the default 404 handler.
+func (r *Router) SetNotFoundHandler(h HandlerFunc) {
+	if h != nil {
+		r.notFound = h
+	}
+}
+
 // Group creates a nested route group with a shared URL prefix.
 func (r *Router) Group(prefix string, fn func(*Router)) *Router {
 	sub := &Router{
@@ -103,7 +110,7 @@ func (r *Router) match(method, path string) (*routeNode, map[string]string) {
 	reqSegments := cleanSegments(path)
 
 	for _, route := range r.routes {
-		if route.method != method {
+		if route.method != method && !(method == http.MethodHead && route.method == http.MethodGet) {
 			continue
 		}
 

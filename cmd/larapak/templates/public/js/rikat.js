@@ -2474,11 +2474,344 @@
   };
 
 
+  // =========================================================================
+  // RikatLive: Server-Driven Reactive Component & DOM Morphing Engine
+  // =========================================================================
+  const RikatLive = window.RikatLive = Rikat.live = {
+    endpoint: '/_rikat/live',
+    components: new Map(),
+
+    init: function() {
+      document.querySelectorAll('[r-component]').forEach(el => this.initComponent(el));
+    },
+
+    initComponent: function(rootEl) {
+      const id = rootEl.getAttribute('r-id');
+      if (!id) return;
+
+      const compName = rootEl.getAttribute('r-component');
+      let snapshot = {};
+      try {
+        snapshot = JSON.parse(rootEl.getAttribute('r-snapshot') || '{}');
+      } catch (e) {
+        console.error('[RikatLive] Gagal parse snapshot:', e);
+      }
+      const checksum = rootEl.getAttribute('r-checksum') || '';
+
+      const compInstance = {
+        id,
+        name: compName,
+        el: rootEl,
+        snapshot,
+        checksum,
+        pendingUpdates: {},
+        debounceTimer: null,
+        isBusy: false
+      };
+
+      this.components.set(id, compInstance);
+      this.bindEvents(rootEl, compInstance);
+      this.setupPolling(rootEl, compInstance);
+    },
+
+    bindEvents: function(rootEl, comp) {
+      // 1. Action Clicks: [r-click], [(click)]
+      rootEl.querySelectorAll('[r-click], [\\(click\\)]').forEach(btn => {
+        if (btn._rikatBound) return;
+        btn._rikatBound = true;
+        const actionStr = btn.getAttribute('r-click') || btn.getAttribute('(click)');
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.executeAction(comp, actionStr, btn);
+        });
+      });
+
+      // 2. Form Submits: [r-submit], [(submit)]
+      rootEl.querySelectorAll('form[r-submit], form[\\(submit\\)]').forEach(form => {
+        if (form._rikatBound) return;
+        form._rikatBound = true;
+        const actionStr = form.getAttribute('r-submit') || form.getAttribute('(submit)');
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const formData = new FormData(form);
+          const updates = {};
+          formData.forEach((val, key) => { updates[key] = val; });
+          Object.assign(comp.pendingUpdates, updates);
+          this.executeAction(comp, actionStr, form);
+        });
+      });
+
+      // 3. Two-Way Model Binding: [r-model]
+      rootEl.querySelectorAll('[r-model]').forEach(input => {
+        if (input._rikatBound) return;
+        input._rikatBound = true;
+        const field = input.getAttribute('r-model');
+        const isLazy = input.hasAttribute('r-model.lazy');
+        const debounceMs = parseInt(input.getAttribute('r-debounce') || '150', 10);
+
+        const updateFn = () => {
+          let val = input.value;
+          if (input.type === 'checkbox') val = input.checked;
+          comp.pendingUpdates[field] = val;
+
+          clearTimeout(comp.debounceTimer);
+          if (isLazy) {
+            this.sendPayload(comp);
+          } else {
+            comp.debounceTimer = setTimeout(() => this.sendPayload(comp), debounceMs);
+          }
+        };
+
+        if (input.type === 'checkbox' || input.type === 'radio' || input.tagName === 'SELECT') {
+          input.addEventListener('change', updateFn);
+        } else if (isLazy) {
+          input.addEventListener('change', updateFn);
+        } else {
+          input.addEventListener('input', updateFn);
+        }
+      });
+    },
+
+    setupPolling: function(rootEl, comp) {
+      const pollAttr = rootEl.getAttribute('r-poll');
+      if (!pollAttr) return;
+
+      let intervalMs = 2000;
+      if (pollAttr.endsWith('ms')) intervalMs = parseInt(pollAttr, 10);
+      else if (pollAttr.endsWith('s')) intervalMs = parseFloat(pollAttr) * 1000;
+      else if (!isNaN(parseInt(pollAttr, 10))) intervalMs = parseInt(pollAttr, 10);
+
+      setInterval(() => {
+        if (!comp.isBusy && document.body.contains(comp.el)) {
+          this.sendPayload(comp);
+        }
+      }, intervalMs);
+    },
+
+    executeAction: function(comp, actionStr, triggerEl) {
+      // Parse method name and optional arguments e.g. "Add(10)" or "Save"
+      let actionName = actionStr;
+      let args = [];
+      const match = actionStr.match(/^([a-zA-Z0-9_]+)\((.*)\)$/);
+      if (match) {
+        actionName = match[1];
+        try {
+          args = JSON.parse(`[${match[2]}]`);
+        } catch (err) {
+          args = match[2].split(',').map(s => s.trim().replace(/^['"]|['"]$/g, ''));
+        }
+      }
+
+      this.setLoading(comp, triggerEl, true);
+      this.sendPayload(comp, actionName, args, () => {
+        this.setLoading(comp, triggerEl, false);
+      });
+    },
+
+    setLoading: function(comp, triggerEl, isLoading) {
+      comp.isBusy = isLoading;
+      if (triggerEl) {
+        if (isLoading) {
+          triggerEl.setAttribute('disabled', '');
+          triggerEl.classList.add('r-loading');
+        } else {
+          triggerEl.removeAttribute('disabled');
+          triggerEl.classList.remove('r-loading');
+        }
+      }
+      comp.el.querySelectorAll('[r-loading]').forEach(loadEl => {
+        loadEl.style.display = isLoading ? '' : 'none';
+      });
+    },
+
+    sendPayload: function(comp, action, args, callback) {
+      const payload = {
+        component: comp.name,
+        id: comp.id,
+        snapshot: comp.snapshot,
+        checksum: comp.checksum,
+        action: action || '',
+        args: args || [],
+        updates: comp.pendingUpdates || {}
+      };
+      comp.pendingUpdates = {};
+
+      // Get CSRF Token if available
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                        document.querySelector('input[name="_token"]')?.value || '';
+
+      fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': csrfToken
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          console.error('[RikatLive Error]', data.error);
+          if (Rikat.toast) Rikat.toast.show({ severity: 'error', summary: 'RikatLive Gagal', detail: data.error });
+          return;
+        }
+
+        // Morph DOM
+        if (data.html) {
+          this.morph(comp, data.html);
+        }
+        comp.snapshot = data.snapshot || comp.snapshot;
+        comp.checksum = data.checksum || comp.checksum;
+      })
+      .catch(err => {
+        console.error('[RikatLive Network Error]', err);
+      })
+      .finally(() => {
+        if (typeof callback === 'function') callback();
+      });
+    },
+
+    morph: function(comp, newHTML) {
+      const activeEl = document.activeElement;
+      let activePath = null;
+      let selectionStart = 0;
+      let selectionEnd = 0;
+
+      if (activeEl && comp.el.contains(activeEl)) {
+        activePath = this.getNodePath(comp.el, activeEl);
+        if ('selectionStart' in activeEl) {
+          selectionStart = activeEl.selectionStart;
+          selectionEnd = activeEl.selectionEnd;
+        }
+      }
+
+      const tempContainer = document.createElement('div');
+      tempContainer.innerHTML = newHTML.trim();
+      const newRoot = tempContainer.firstElementChild;
+
+      if (newRoot) {
+        this.morphTree(comp.el, newRoot);
+        this.bindEvents(comp.el, comp);
+
+        // Restore focus and cursor selection
+        if (activePath) {
+          const targetToFocus = this.resolveNodePath(comp.el, activePath);
+          if (targetToFocus && typeof targetToFocus.focus === 'function') {
+            targetToFocus.focus();
+            if ('setSelectionRange' in targetToFocus) {
+              targetToFocus.setSelectionRange(selectionStart, selectionEnd);
+            }
+          }
+        }
+      }
+    },
+
+    morphTree: function(fromNode, toNode) {
+      if (fromNode.nodeType !== toNode.nodeType) {
+        fromNode.parentNode.replaceChild(toNode.cloneNode(true), fromNode);
+        return;
+      }
+
+      // Text node
+      if (fromNode.nodeType === Node.TEXT_NODE) {
+        if (fromNode.nodeValue !== toNode.nodeValue) {
+          fromNode.nodeValue = toNode.nodeValue;
+        }
+        return;
+      }
+
+      // Tag changed
+      if (fromNode.tagName !== toNode.tagName) {
+        fromNode.parentNode.replaceChild(toNode.cloneNode(true), fromNode);
+        return;
+      }
+
+      // Update attributes
+      const fromAttrs = fromNode.attributes;
+      const toAttrs = toNode.attributes;
+
+      for (let i = fromAttrs.length - 1; i >= 0; i--) {
+        const attrName = fromAttrs[i].name;
+        if (!toNode.hasAttribute(attrName)) {
+          fromNode.removeAttribute(attrName);
+        }
+      }
+
+      for (let i = 0; i < toAttrs.length; i++) {
+        const attr = toAttrs[i];
+        if (fromNode.getAttribute(attr.name) !== attr.value) {
+          fromNode.setAttribute(attr.name, attr.value);
+        }
+      }
+
+      // Sync form input values
+      if (fromNode.tagName === 'INPUT' || fromNode.tagName === 'TEXTAREA') {
+        if (fromNode !== document.activeElement && fromNode.value !== toNode.value) {
+          fromNode.value = toNode.value;
+        }
+      }
+
+      // Morph children
+      const fromChildren = Array.from(fromNode.childNodes);
+      const toChildren = Array.from(toNode.childNodes);
+
+      let fromIdx = 0;
+      let toIdx = 0;
+
+      while (toIdx < toChildren.length) {
+        const toChild = toChildren[toIdx];
+        const fromChild = fromChildren[fromIdx];
+
+        if (!fromChild) {
+          fromNode.appendChild(toChild.cloneNode(true));
+          toIdx++;
+          continue;
+        }
+
+        this.morphTree(fromChild, toChild);
+        fromIdx++;
+        toIdx++;
+      }
+
+      while (fromIdx < fromChildren.length) {
+        fromNode.removeChild(fromChildren[fromIdx]);
+        fromIdx++;
+      }
+    },
+
+    getNodePath: function(root, target) {
+      const path = [];
+      let current = target;
+      while (current && current !== root) {
+        const parent = current.parentNode;
+        if (!parent) break;
+        const index = Array.prototype.indexOf.call(parent.childNodes, current);
+        path.unshift(index);
+        current = parent;
+      }
+      return path;
+    },
+
+    resolveNodePath: function(root, path) {
+      let current = root;
+      for (let i = 0; i < path.length; i++) {
+        if (!current || !current.childNodes || !current.childNodes[path[i]]) return null;
+        current = current.childNodes[path[i]];
+      }
+      return current;
+    }
+  };
+
   // Auto-initialize on DOMContentLoaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => Rikat.init());
+    document.addEventListener('DOMContentLoaded', () => {
+      Rikat.init();
+      RikatLive.init();
+    });
   } else {
     Rikat.init();
+    RikatLive.init();
   }
 })();
 

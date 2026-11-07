@@ -14,6 +14,7 @@ type ProjectPaths struct {
 	Models       string
 	Middleware   string
 	Jobs         string
+	Live         string
 	Database     string
 	Migrations   string
 	Seeders      string
@@ -33,6 +34,7 @@ var Config = map[string]ProjectPaths{
 		Models:       filepath.Join("jeroan", "Wujud"),
 		Middleware:   filepath.Join("jeroan", "Pencegat"),
 		Jobs:         filepath.Join("jeroan", "Gawean"),
+		Live:         filepath.Join("jeroan", "Urip"),
 		Database:     "lumbung",
 		Migrations:   filepath.Join("lumbung", "owahan"),
 		Seeders:      filepath.Join("lumbung", "bibit"),
@@ -49,6 +51,7 @@ var Config = map[string]ProjectPaths{
 		Models:       filepath.Join("aplikasi", "Model"),
 		Middleware:   filepath.Join("aplikasi", "Penyaring"),
 		Jobs:         filepath.Join("aplikasi", "Tugas"),
+		Live:         filepath.Join("aplikasi", "Live"),
 		Database:     "basisdata",
 		Migrations:   filepath.Join("basisdata", "migrasi"),
 		Seeders:      filepath.Join("basisdata", "seeder"),
@@ -65,6 +68,7 @@ var Config = map[string]ProjectPaths{
 		Models:       filepath.Join("app", "Models"),
 		Middleware:   filepath.Join("app", "Middleware"),
 		Jobs:         filepath.Join("app", "Jobs"),
+		Live:         filepath.Join("app", "Live"),
 		Database:     "database",
 		Migrations:   filepath.Join("database", "migrations"),
 		Seeders:      filepath.Join("database", "seeders"),
@@ -139,6 +143,7 @@ func (p ProjectPaths) InDir(baseDir string) ProjectPaths {
 		Models:       filepath.Join(baseDir, p.Models),
 		Middleware:   filepath.Join(baseDir, p.Middleware),
 		Jobs:         filepath.Join(baseDir, p.Jobs),
+		Live:         filepath.Join(baseDir, p.Live),
 		Database:     filepath.Join(baseDir, p.Database),
 		Migrations:   filepath.Join(baseDir, p.Migrations),
 		Seeders:      filepath.Join(baseDir, p.Seeders),
@@ -154,7 +159,7 @@ func (p ProjectPaths) InDir(baseDir string) ProjectPaths {
 // GetPaths returns the resolved ProjectPaths for a base directory.
 func GetPaths(baseDir string) ProjectPaths {
 	lang := DetectProjectLanguage(baseDir)
-	return Config[lang]
+	return Config[lang].InDir(baseDir)
 }
 
 func exists(path string) bool {

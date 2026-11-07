@@ -7,8 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/IlhamHattaManggala/larapak-go/pkg/database"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/larapak"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/paths"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/rikatlive"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/security"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/studio"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/view"
 )
@@ -68,6 +71,10 @@ func (eng *Engine) BindRoutes(app *larapak.App) {
 
 // BindRoutesWithStudio binds the 'rute' global object and registers routes with Larapak and Studio.
 func (eng *Engine) BindRoutesWithStudio(app *larapak.App, st *studio.Studio) {
+	// Auto-mount RikatLive realtime component routes and Ngapak script loader
+	rikatlive.RegisterRoutes(app)
+	RegisterNgapakComponentLoader(eng.baseDir, eng, eng.ViewEngine)
+
 	ruteObj := map[string]any{
 		"get": func(args []any) (any, error) {
 			return eng.registerRoute(app, st, "GET", args)
@@ -87,6 +94,300 @@ func (eng *Engine) BindRoutesWithStudio(app *larapak.App, st *studio.Studio) {
 	}
 
 	eng.Evaluator.Globals.Set("rute", ruteObj)
+
+	// Bind 'db' global object for fluent database queries in .ngpk scripts
+	dbObj := map[string]any{
+		"tabel": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("db.tabel mbutuhna jeneng tabel")
+			}
+			tableName := fmt.Sprintf("%v", args[0])
+			conn, err := database.GetManager().Connection()
+			if err != nil {
+				return nil, err
+			}
+			return createQueryBuilderBridge(conn.Table(tableName)), nil
+		},
+		"table": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("db.table requires table name")
+			}
+			tableName := fmt.Sprintf("%v", args[0])
+			conn, err := database.GetManager().Connection()
+			if err != nil {
+				return nil, err
+			}
+			return createQueryBuilderBridge(conn.Table(tableName)), nil
+		},
+		"sambungan": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("db.sambungan mbutuhna jeneng koneksi")
+			}
+			connName := fmt.Sprintf("%v", args[0])
+			conn, err := database.GetManager().Connection(connName)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{
+				"tabel": func(tArgs []any) (any, error) {
+					if len(tArgs) == 0 {
+						return nil, fmt.Errorf("mbutuhna jeneng tabel")
+					}
+					return createQueryBuilderBridge(conn.Table(fmt.Sprintf("%v", tArgs[0]))), nil
+				},
+				"table": func(tArgs []any) (any, error) {
+					if len(tArgs) == 0 {
+						return nil, fmt.Errorf("requires table name")
+					}
+					return createQueryBuilderBridge(conn.Table(fmt.Sprintf("%v", tArgs[0]))), nil
+				},
+			}, nil
+		},
+		"connection": func(args []any) (any, error) {
+			connName := "default"
+			if len(args) > 0 {
+				connName = fmt.Sprintf("%v", args[0])
+			}
+			conn, err := database.GetManager().Connection(connName)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{
+				"table": func(tArgs []any) (any, error) {
+					if len(tArgs) == 0 {
+						return nil, fmt.Errorf("requires table name")
+					}
+					return createQueryBuilderBridge(conn.Table(fmt.Sprintf("%v", tArgs[0]))), nil
+				},
+				"tabel": func(tArgs []any) (any, error) {
+					if len(tArgs) == 0 {
+						return nil, fmt.Errorf("mbutuhna jeneng tabel")
+					}
+					return createQueryBuilderBridge(conn.Table(fmt.Sprintf("%v", tArgs[0]))), nil
+				},
+			}, nil
+		},
+	}
+	eng.Evaluator.Globals.Set("db", dbObj)
+
+	// Bind 'sandi' and 'hash' global objects for password hashing
+	sandiObj := map[string]any{
+		"gawe": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return "", fmt.Errorf("sandi.gawe mbutuhna password")
+			}
+			return security.HashPassword(fmt.Sprintf("%v", args[0]))
+		},
+		"make": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return "", fmt.Errorf("hash.make requires password")
+			}
+			return security.HashPassword(fmt.Sprintf("%v", args[0]))
+		},
+		"cocok": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return false, fmt.Errorf("sandi.cocok mbutuhna password lan hash")
+			}
+			return security.VerifyPassword(fmt.Sprintf("%v", args[0]), fmt.Sprintf("%v", args[1])), nil
+		},
+		"check": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return false, fmt.Errorf("hash.check requires password and hash")
+			}
+			return security.VerifyPassword(fmt.Sprintf("%v", args[0]), fmt.Sprintf("%v", args[1])), nil
+		},
+	}
+	eng.Evaluator.Globals.Set("sandi", sandiObj)
+	eng.Evaluator.Globals.Set("hash", sandiObj)
+}
+
+func createQueryBuilderBridge(qb *database.QueryBuilder) map[string]any {
+	var bridge map[string]any
+	bridge = map[string]any{
+		"pilih": func(args []any) (any, error) {
+			var cols []string
+			for _, a := range args {
+				cols = append(cols, fmt.Sprintf("%v", a))
+			}
+			qb.Select(cols...)
+			return bridge, nil
+		},
+		"select": func(args []any) (any, error) {
+			var cols []string
+			for _, a := range args {
+				cols = append(cols, fmt.Sprintf("%v", a))
+			}
+			qb.Select(cols...)
+			return bridge, nil
+		},
+		"neng": func(args []any) (any, error) {
+			if len(args) >= 3 {
+				qb.Where(fmt.Sprintf("%v", args[0]), fmt.Sprintf("%v", args[1]), args[2])
+			} else if len(args) == 2 {
+				qb.Where(fmt.Sprintf("%v", args[0]), "=", args[1])
+			}
+			return bridge, nil
+		},
+		"where": func(args []any) (any, error) {
+			if len(args) >= 3 {
+				qb.Where(fmt.Sprintf("%v", args[0]), fmt.Sprintf("%v", args[1]), args[2])
+			} else if len(args) == 2 {
+				qb.Where(fmt.Sprintf("%v", args[0]), "=", args[1])
+			}
+			return bridge, nil
+		},
+		"urut": func(args []any) (any, error) {
+			if len(args) > 1 {
+				qb.OrderBy(fmt.Sprintf("%v", args[0]), fmt.Sprintf("%v", args[1]))
+			} else if len(args) == 1 {
+				qb.OrderBy(fmt.Sprintf("%v", args[0]), "ASC")
+			}
+			return bridge, nil
+		},
+		"orderBy": func(args []any) (any, error) {
+			if len(args) > 1 {
+				qb.OrderBy(fmt.Sprintf("%v", args[0]), fmt.Sprintf("%v", args[1]))
+			} else if len(args) == 1 {
+				qb.OrderBy(fmt.Sprintf("%v", args[0]), "ASC")
+			}
+			return bridge, nil
+		},
+		"wates": func(args []any) (any, error) {
+			if len(args) > 0 {
+				if n, ok := toInt(args[0]); ok {
+					qb.Limit(n)
+				}
+			}
+			return bridge, nil
+		},
+		"limit": func(args []any) (any, error) {
+			if len(args) > 0 {
+				if n, ok := toInt(args[0]); ok {
+					qb.Limit(n)
+				}
+			}
+			return bridge, nil
+		},
+		"jupuk": func(args []any) (any, error) {
+			res, err := qb.Get()
+			if err != nil {
+				return []any{}, nil
+			}
+			var list []any
+			for _, r := range res {
+				list = append(list, r)
+			}
+			return list, nil
+		},
+		"get": func(args []any) (any, error) {
+			res, err := qb.Get()
+			if err != nil {
+				return []any{}, nil
+			}
+			var list []any
+			for _, r := range res {
+				list = append(list, r)
+			}
+			return list, nil
+		},
+		"siji": func(args []any) (any, error) {
+			row, err := qb.First()
+			if err != nil || row == nil {
+				return nil, nil
+			}
+			return row, nil
+		},
+		"first": func(args []any) (any, error) {
+			row, err := qb.First()
+			if err != nil || row == nil {
+				return nil, nil
+			}
+			return row, nil
+		},
+		"cacah": func(args []any) (any, error) {
+			return qb.Count()
+		},
+		"count": func(args []any) (any, error) {
+			return qb.Count()
+		},
+		"tambah": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return int64(0), fmt.Errorf("tambah mbutuhna data dictionary")
+			}
+			if dMap, ok := args[0].(map[string]any); ok {
+				return qb.Insert(dMap)
+			}
+			return int64(0), fmt.Errorf("data kudu wujud dictionary")
+		},
+		"insert": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return int64(0), fmt.Errorf("insert requires data map")
+			}
+			if dMap, ok := args[0].(map[string]any); ok {
+				return qb.Insert(dMap)
+			}
+			return int64(0), fmt.Errorf("data must be a map")
+		},
+		"owahi": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return int64(0), fmt.Errorf("owahi mbutuhna data dictionary")
+			}
+			if dMap, ok := args[0].(map[string]any); ok {
+				return qb.Update(dMap)
+			}
+			return int64(0), fmt.Errorf("data kudu wujud dictionary")
+		},
+		"update": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return int64(0), fmt.Errorf("update requires data map")
+			}
+			if dMap, ok := args[0].(map[string]any); ok {
+				return qb.Update(dMap)
+			}
+			return int64(0), fmt.Errorf("data must be a map")
+		},
+		"busak": func(args []any) (any, error) {
+			return qb.Delete()
+		},
+		"delete": func(args []any) (any, error) {
+			return qb.Delete()
+		},
+		"toSql": func(args []any) (any, error) {
+			sqlStr, _ := qb.ToSelectSQL()
+			return sqlStr, nil
+		},
+		"kaca": func(args []any) (any, error) {
+			page := 1
+			perPage := 15
+			if len(args) > 0 {
+				if p, ok := toInt(args[0]); ok {
+					page = p
+				}
+			}
+			if len(args) > 1 {
+				if pp, ok := toInt(args[1]); ok {
+					perPage = pp
+				}
+			}
+			return qb.Paginate(page, perPage)
+		},
+		"paginate": func(args []any) (any, error) {
+			page := 1
+			perPage := 15
+			if len(args) > 0 {
+				if p, ok := toInt(args[0]); ok {
+					page = p
+				}
+			}
+			if len(args) > 1 {
+				if pp, ok := toInt(args[1]); ok {
+					perPage = pp
+				}
+			}
+			return qb.Paginate(page, perPage)
+		},
+	}
+	return bridge
 }
 
 func (eng *Engine) registerRoute(app *larapak.App, st *studio.Studio, method string, args []any) (any, error) {
@@ -163,10 +464,104 @@ func (eng *Engine) createContextBridge(c *larapak.Context) (map[string]any, map[
 		params[k] = v
 	}
 
+	sess := c.Session()
+	sesiObj := map[string]any{
+		"simpen": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("sesi.simpen mbutuhna key lan value")
+			}
+			sess.Set(fmt.Sprintf("%v", args[0]), args[1])
+			return nil, nil
+		},
+		"set": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("session.set requires key and value")
+			}
+			sess.Set(fmt.Sprintf("%v", args[0]), args[1])
+			return nil, nil
+		},
+		"jupuk": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, nil
+			}
+			val, ok := sess.Get(fmt.Sprintf("%v", args[0]))
+			if !ok && len(args) > 1 {
+				return args[1], nil
+			}
+			return val, nil
+		},
+		"get": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, nil
+			}
+			val, ok := sess.Get(fmt.Sprintf("%v", args[0]))
+			if !ok && len(args) > 1 {
+				return args[1], nil
+			}
+			return val, nil
+		},
+		"busak": func(args []any) (any, error) {
+			if len(args) > 0 {
+				sess.Delete(fmt.Sprintf("%v", args[0]))
+			}
+			return nil, nil
+		},
+		"delete": func(args []any) (any, error) {
+			if len(args) > 0 {
+				sess.Delete(fmt.Sprintf("%v", args[0]))
+			}
+			return nil, nil
+		},
+		"kilat": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("sesi.kilat mbutuhna key lan pesan")
+			}
+			sess.Flash(fmt.Sprintf("%v", args[0]), fmt.Sprintf("%v", args[1]))
+			return nil, nil
+		},
+		"flash": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("session.flash requires key and message")
+			}
+			sess.Flash(fmt.Sprintf("%v", args[0]), fmt.Sprintf("%v", args[1]))
+			return nil, nil
+		},
+		"kilat_jupuk": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return "", nil
+			}
+			msg := sess.GetFlash(fmt.Sprintf("%v", args[0]))
+			if msg == "" && len(args) > 1 {
+				return fmt.Sprintf("%v", args[1]), nil
+			}
+			return msg, nil
+		},
+		"get_flash": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return "", nil
+			}
+			msg := sess.GetFlash(fmt.Sprintf("%v", args[0]))
+			if msg == "" && len(args) > 1 {
+				return fmt.Sprintf("%v", args[1]), nil
+			}
+			return msg, nil
+		},
+		"kabeh": func(args []any) (any, error) {
+			return sess.All(), nil
+		},
+		"all": func(args []any) (any, error) {
+			return sess.All(), nil
+		},
+	}
+	eng.Evaluator.Globals.Set("sesi", sesiObj)
+	eng.Evaluator.Globals.Set("session", sesiObj)
+
 	req := map[string]any{
-		"params": params,
-		"method": c.Method(),
-		"path":   c.Path(),
+		"params":  params,
+		"method":  c.Method(),
+		"path":    c.Path(),
+		"sesi":    sesiObj,
+		"session": sesiObj,
 		"query": func(args []any) (any, error) {
 			if len(args) == 0 {
 				return "", nil
@@ -174,7 +569,63 @@ func (eng *Engine) createContextBridge(c *larapak.Context) (map[string]any, map[
 			key := fmt.Sprintf("%v", args[0])
 			return c.Query(key), nil
 		},
+		"input": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return "", nil
+			}
+			key := fmt.Sprintf("%v", args[0])
+			all := c.AllInputs()
+			if val, ok := all[key]; ok {
+				return val, nil
+			}
+			if len(args) > 1 {
+				return args[1], nil
+			}
+			return "", nil
+		},
+		"all": func(args []any) (any, error) {
+			return c.AllInputs(), nil
+		},
+		"kabeh": func(args []any) (any, error) {
+			return c.AllInputs(), nil
+		},
+		"file": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("req.file mbutuhna jeneng field")
+			}
+			key := fmt.Sprintf("%v", args[0])
+			fh, err := c.FormFile(key)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{
+				"name":   fh.Filename,
+				"jeneng": fh.Filename,
+				"size":   fh.Size,
+				"ukuran": fh.Size,
+				"type":   fh.Header.Get("Content-Type"),
+				"tipe":   fh.Header.Get("Content-Type"),
+				"save": func(sArgs []any) (any, error) {
+					if len(sArgs) == 0 {
+						return false, fmt.Errorf("file.save mbutuhna path tujuan")
+					}
+					dst := fmt.Sprintf("%v", sArgs[0])
+					err := c.SaveUploadedFile(fh, dst)
+					return err == nil, err
+				},
+				"simpen": func(sArgs []any) (any, error) {
+					if len(sArgs) == 0 {
+						return false, fmt.Errorf("file.simpen mbutuhna path tujuan")
+					}
+					dst := fmt.Sprintf("%v", sArgs[0])
+					err := c.SaveUploadedFile(fh, dst)
+					return err == nil, err
+				},
+			}, nil
+		},
 	}
+	req["isi"] = req["input"]
+	req["berkas"] = req["file"]
 
 	// res bridge
 	var res map[string]any
@@ -188,6 +639,21 @@ func (eng *Engine) createContextBridge(c *larapak.Context) (map[string]any, map[
 			if len(args) > 1 {
 				if dMap, ok := args[1].(map[string]any); ok {
 					data = dMap
+				}
+			}
+			if _, hasFlash := data["flash"]; !hasFlash {
+				flashes := sess.AllFlashes()
+				data["flash"] = flashes
+				for k, v := range flashes {
+					data["flash_"+k] = v
+				}
+			}
+			if _, hasSess := data["session"]; !hasSess {
+				data["session"] = sess.All()
+			}
+			if _, hasCsrf := data["_csrf"]; !hasCsrf {
+				if csrfVal, ok := c.Get("_csrf"); ok {
+					data["_csrf"] = csrfVal
 				}
 			}
 			htmlContent, err := eng.ViewEngine.RenderTemplate(viewName, data)
@@ -221,6 +687,32 @@ func (eng *Engine) createContextBridge(c *larapak.Context) (map[string]any, map[
 				}
 			}
 			return res, nil
+		},
+		"redirect": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("res.redirect mbutuhna target URL")
+			}
+			targetURL := fmt.Sprintf("%v", args[0])
+			code := http.StatusFound
+			if len(args) > 1 {
+				if cCode, ok := toInt(args[1]); ok {
+					code = cCode
+				}
+			}
+			return nil, c.Redirect(code, targetURL)
+		},
+		"alurna": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("res.alurna mbutuhna target URL")
+			}
+			targetURL := fmt.Sprintf("%v", args[0])
+			code := http.StatusFound
+			if len(args) > 1 {
+				if cCode, ok := toInt(args[1]); ok {
+					code = cCode
+				}
+			}
+			return nil, c.Redirect(code, targetURL)
 		},
 	}
 

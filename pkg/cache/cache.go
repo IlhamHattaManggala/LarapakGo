@@ -12,7 +12,38 @@ type item struct {
 	expiration int64
 }
 
-// MemoryCache provides in-memory thread-safe caching with TTL.
+// Store defines the unified caching interface for LarapakGo drivers.
+type Store interface {
+	Get(key string) (any, bool)
+	Set(key string, value any, duration time.Duration)
+	Delete(key string)
+	Flush()
+}
+
+var (
+	defaultStore Store
+	storeOnce    sync.Once
+)
+
+// Default returns the active Store based on the CACHE_DRIVER environment variable.
+// Defaults to in-memory cache if not set or if set to "memory".
+// If set to "redis", returns an initialized RedisCache instance.
+func Default() Store {
+	storeOnce.Do(func() {
+		driver := os.Getenv("CACHE_DRIVER")
+		if driver == "redis" {
+			defaultStore = NewRedisCacheFromEnv()
+		} else {
+			defaultStore = NewMemoryCache()
+		}
+	})
+	return defaultStore
+}
+
+// SetDefaultStore allows manually overriding the default global store.
+func SetDefaultStore(s Store) {
+	defaultStore = s
+}
 type MemoryCache struct {
 	items map[string]item
 	mu    sync.RWMutex

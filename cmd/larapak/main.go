@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	_ "embed"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/IlhamHattaManggala/larapak-go/pkg/cache"
@@ -169,6 +171,13 @@ func main() {
 		}
 		createMigration(args[0])
 
+	case "make:live", "gawe:urip", "gawe:live", "make:component", "gawe:komponen":
+		if len(args) < 1 {
+			fmt.Println("Kliru: Wei jeneng komponen RikatLive ndisit. Contohe: larapak gawe:urip Counter")
+			os.Exit(1)
+		}
+		createLiveComponent(args[0])
+
 	// =========================================================================
 	// 4. DATABASE & MIGRASI
 	// =========================================================================
@@ -262,10 +271,11 @@ func showHelp() {
 
 Perintah Dialek Ngapak (Asli):
   larapak anyar <NamaProyek> [--bahasa=ngapak|indonesia|english]
-  larapak ladeni [port]                         (Urubna server lokal & Studio)
+  larapak ladeni [port]                         (Urubna server lokal, Studio & Auto-Reload)
   larapak dalan:daptar                          (Daftar kabeh rute HTTP)
   larapak gawe:pangatur <NamaController>        (Gawe controller anyar)
   larapak gawe:wujud <NamaModel>                (Gawe model ORM anyar)
+  larapak gawe:urip <NamaKomponen>              (Gawe komponen realtime RikatLive)
   larapak gawe:migrasi <NamaMigrasi>            (Gawe skema migrasi anyar)
   larapak gawe:pencegat <NamaMiddleware>        (Gawe middleware anyar)
   larapak gawe:gawean <NamaJob>                 (Gawe background queue job)
@@ -285,7 +295,7 @@ Perintah Dialek Ngapak (Asli):
   larapak tulung                                (Ndeleng panduan kiye)
 
 Perintah Standar (Laravel Artisan Style):
-  larapak new, serve, route:list, make:controller, make:model, make:migration,
+  larapak new, serve, route:list, make:controller, make:model, make:live, make:migration,
   make:middleware, make:job, make:seeder, migrate, migrate:fresh, migrate:status,
   rollback, db:seed, queue:work, cache:clear, css:build, run, repl, test, help, version
 
@@ -380,9 +390,168 @@ func getDemoWelcomeHTML() string {
 	return html
 }
 
-func serveDemoApp(port string) {
+// LiveReloader routes requests to the active in-memory Larapak App instance,
+// allowing seamless atomic hot-reloading when project files change without dropping the TCP port,
+// and providing Server-Sent Events (SSE) auto-refresh directly to connected browsers.
+type LiveReloader struct {
+	mu      sync.RWMutex
+	app     *larapak.App
+	clients map[chan string]bool
+	cMu     sync.Mutex
+}
+
+func (lr *LiveReloader) BroadcastReload() {
+	lr.cMu.Lock()
+	defer lr.cMu.Unlock()
+	for ch := range lr.clients {
+		select {
+		case ch <- "reload":
+		default:
+		}
+	}
+}
+
+type liveResponseWriter struct {
+	http.ResponseWriter
+	buf    bytes.Buffer
+	isHTML bool
+	code   int
+}
+
+func (w *liveResponseWriter) WriteHeader(statusCode int) {
+	w.code = statusCode
+	ct := w.Header().Get("Content-Type")
+	if strings.Contains(ct, "text/html") {
+		w.isHTML = true
+	} else {
+		w.ResponseWriter.WriteHeader(statusCode)
+	}
+}
+
+func (w *liveResponseWriter) Write(b []byte) (int, error) {
+	if w.isHTML {
+		return w.buf.Write(b)
+	}
+	return w.ResponseWriter.Write(b)
+}
+
+const liveReloadScript = `
+<!-- Larapak Live-Reload Auto-Refresh -->
+<script>
+(()=>{
+  if (window.EventSource) {
+    const es = new EventSource('/_larapak/live-reload');
+    es.onmessage = (e) => {
+      if (e.data === 'reload') {
+        location.reload();
+      }
+    };
+  }
+})();
+</script>
+</body>`
+
+func (lr *LiveReloader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// SSE endpoint for browser auto-refresh
+	if r.URL.Path == "/_larapak/live-reload" {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+			return
+		}
+
+		msgChan := make(chan string, 1)
+		lr.cMu.Lock()
+		if lr.clients == nil {
+			lr.clients = make(map[chan string]bool)
+		}
+		lr.clients[msgChan] = true
+		lr.cMu.Unlock()
+
+		defer func() {
+			lr.cMu.Lock()
+			delete(lr.clients, msgChan)
+			lr.cMu.Unlock()
+		}()
+
+		fmt.Fprintf(w, "data: connected\n\n")
+		flusher.Flush()
+
+		notify := r.Context().Done()
+		for {
+			select {
+			case <-notify:
+				return
+			case msg := <-msgChan:
+				fmt.Fprintf(w, "data: %s\n\n", msg)
+				flusher.Flush()
+			}
+		}
+	}
+
+	lr.mu.RLock()
+	currentApp := lr.app
+	lr.mu.RUnlock()
+
+	// In development mode, inject live reload script into HTML responses
+	isDev := strings.ToLower(os.Getenv("APP_ENV")) != "production"
+	if isDev && strings.Contains(r.Header.Get("Accept"), "text/html") {
+		lw := &liveResponseWriter{ResponseWriter: w, code: http.StatusOK}
+		currentApp.ServeHTTP(lw, r)
+		if lw.isHTML {
+			htmlContent := lw.buf.String()
+			if strings.Contains(htmlContent, "</body>") {
+				htmlContent = strings.Replace(htmlContent, "</body>", liveReloadScript, 1)
+			}
+			w.Header().Set("Content-Length", fmt.Sprintf("%d", len(htmlContent)))
+			w.WriteHeader(lw.code)
+			_, _ = w.Write([]byte(htmlContent))
+			return
+		}
+		return
+	}
+
+	currentApp.ServeHTTP(w, r)
+}
+
+func scanWatchedFiles() map[string]int64 {
+	modTimes := make(map[string]int64)
+	watchedExts := map[string]bool{
+		".ngpk":  true,
+		".nview": true,
+		".env":   true,
+		".css":   true,
+		".js":    true,
+	}
+
+	_ = filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if info.IsDir() {
+			base := info.Name()
+			if base == ".git" || base == "storage" || base == "dist" || base == "installer" || base == "editors" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		ext := strings.ToLower(filepath.Ext(path))
+		if watchedExts[ext] || info.Name() == ".env" {
+			modTimes[path] = info.ModTime().UnixNano()
+		}
+		return nil
+	})
+	return modTimes
+}
+
+func buildApp(port string, st *studio.Studio) (*larapak.App, error) {
 	app := larapak.New()
-	st := studio.New("LarapakGo Application", version, "local", "http://localhost:"+port)
 
 	// Auto-detect lan pasang rute .ngpk nek ana neng proyek
 	p := paths.GetPaths(".")
@@ -515,8 +684,90 @@ func serveDemoApp(port string) {
 		return nil
 	})
 
+	// 5. Custom 404 Not Found Handler
+	app.SetNotFoundHandler(func(c *larapak.Context) error {
+		if vEngine.HasTemplate("errors/404") {
+			html, err := vEngine.RenderTemplate("errors/404", map[string]any{
+				"path": c.Path(),
+				"code": 404,
+			})
+			if err == nil {
+				return c.HTML(http.StatusNotFound, html)
+			}
+		}
+		if c.IsAJAX() || strings.HasPrefix(c.Path(), "/api/") {
+			return c.JSON(http.StatusNotFound, map[string]any{
+				"error":   "Not Found",
+				"message": "Rute ora ditemokna: " + c.Path(),
+				"status":  http.StatusNotFound,
+			})
+		}
+		return c.HTML(http.StatusNotFound, fmt.Sprintf(`<!DOCTYPE html><html><head><title>404 Not Found</title><style>body{font-family:sans-serif;text-align:center;padding:50px;background:#0d1117;color:#c9d1d9;}h1{color:#f85149;}</style></head><body><h1>404 | Kaca Ora Ditemokna</h1><p>Alamat <code>%s</code> ora ana neng server iki.</p></body></html>`, c.Path()))
+	})
+
+	return app, nil
+}
+
+func serveDemoApp(port string) {
+	st := studio.New("LarapakGo Application", version, "local", "http://localhost:"+port)
+	initialApp, err := buildApp(port, st)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Kliru pas mbangun aplikasi: %v\n", err)
+		os.Exit(1)
+	}
+
+	reloader := &LiveReloader{app: initialApp}
+
+	// Background hot-reload watcher: otomatis aktif pas "larapak serve"
+	go func() {
+		prevTimes := scanWatchedFiles()
+		for {
+			time.Sleep(500 * time.Millisecond)
+			currentTimes := scanWatchedFiles()
+
+			var changedFile string
+			for file, mt := range currentTimes {
+				if prevMt, ok := prevTimes[file]; !ok || prevMt != mt {
+					changedFile = file
+					break
+				}
+			}
+			if changedFile == "" {
+				for file := range prevTimes {
+					if _, ok := currentTimes[file]; !ok {
+						changedFile = file + " (dibusak)"
+						break
+					}
+				}
+			}
+
+			if changedFile != "" {
+				t0 := time.Now()
+				freshStudio := studio.New("LarapakGo Application", version, "local", "http://localhost:"+port)
+				freshApp, err := buildApp(port, freshStudio)
+				if err == nil {
+					reloader.mu.Lock()
+					reloader.app = freshApp
+					reloader.mu.Unlock()
+					reloader.BroadcastReload()
+					prevTimes = currentTimes
+					fmt.Printf("[Auto-Reload] Berkas diowahi: %s -> Rute & aplikasi sukses dianyari (%v) [Browser Auto-Refreshed]!\n", filepath.ToSlash(changedFile), time.Since(t0))
+				} else {
+					fmt.Printf("[Auto-Reload Warning] Gagal nganyari aplikasi: %v\n", err)
+				}
+			}
+		}
+	}()
+
 	fmt.Printf("\nRoute & API Studio aktif neng: http://localhost:%s/_studio\n", port)
-	if err := app.Run(":" + port); err != nil {
+	fmt.Printf("Auto-Reload: Aktif [Ngawasi owahan berkas .ngpk, .nview, .env, assets kanthi otomatis]\n\n")
+
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: reloader,
+	}
+
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "Kliru pas nguripna server: %v\n", err)
 		os.Exit(1)
 	}
@@ -582,10 +833,12 @@ func createNewProject(name, lang string) {
 		p.Models,
 		p.Middleware,
 		p.Jobs,
+		p.Live,
 		p.Migrations,
 		p.Seeders,
 		p.Routes,
 		p.Views,
+		filepath.Join(p.Views, "live"),
 		p.PublicCSS,
 		p.PublicJS,
 		p.PublicImages,
@@ -678,6 +931,48 @@ kelas User extends Model
 rampung
 `
 	_ = os.WriteFile(filepath.Join(p.Models, "User.ngpk"), []byte(userModelContent), 0644)
+
+	// 3b. Komponen Realtime RikatLive bawaan (.ngpk & .nview)
+	_ = os.MkdirAll(p.Live, 0755)
+	_ = os.MkdirAll(filepath.Join(p.Views, "live"), 0755)
+
+	counterNgpkContent := `# Komponen RikatLive Counter nggo Larapak
+# Variabel neng level ndhuwur otomatis dadi reactive state
+
+count = 0
+jeneng = "Pengguna"
+
+gawe tambah(step)
+    nek step == kosong ya
+        step = 1
+    rampung
+    count = count + step
+rampung
+
+gawe kurang(step)
+    nek step == kosong ya
+        step = 1
+    rampung
+    count = count - step
+rampung
+`
+	_ = os.WriteFile(filepath.Join(p.Live, "Counter.ngpk"), []byte(counterNgpkContent), 0644)
+
+	counterNviewContent := `<div class="card p-4 border rounded shadow-sm bg-white">
+    <h3 class="text-lg font-bold mb-3">RikatLive Counter (Halo, {{ jeneng }}!)</h3>
+    <div class="mb-3">
+        <label class="block text-sm text-gray-600 mb-1">Ganti Jeneng:</label>
+        <input type="text" r-model="jeneng" class="border px-3 py-2 rounded w-full" placeholder="Ketik jeneng..." />
+    </div>
+    <div class="flex items-center gap-3">
+        <button r-click="kurang(1)" class="btn btn-secondary px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">-</button>
+        <span class="text-xl font-bold px-3">{{ count }}</span>
+        <button r-click="tambah(1)" class="btn btn-primary px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">+</button>
+    </div>
+    <div r-loading class="text-xs text-blue-500 mt-2">Sedang memproses...</div>
+</div>
+`
+	_ = os.WriteFile(filepath.Join(p.Views, "live", "counter.nview"), []byte(counterNviewContent), 0644)
 
 	// 4. Berkas template Sawangan (.nview) identik persis karo edisi Python
 	_ = os.WriteFile(filepath.Join(p.Views, "layout.nview"), []byte(templateLayoutNview), 0644)
@@ -901,6 +1196,82 @@ CREATE TABLE IF NOT EXISTS %s (
 	fmt.Printf("✓ Migrasi sukses digawe: %s\n", filepath.ToSlash(filePath))
 }
 
+func createLiveComponent(name string) {
+	name = strings.Title(strings.TrimSpace(name))
+	p := paths.GetPaths(".")
+	dirLive := p.Live
+	if dirLive == "" {
+		dirLive = filepath.Join("jeroan", "Urip")
+	}
+	dirViews := filepath.Join(p.Views, "live")
+
+	_ = os.MkdirAll(dirLive, 0755)
+	_ = os.MkdirAll(dirViews, 0755)
+
+	lowerName := strings.ToLower(name)
+
+	// 1. Script Logika (.ngpk)
+	scriptContent := fmt.Sprintf(`# Komponen RikatLive %s nggo Larapak
+# Variabel neng level ndhuwur otomatis dadi reactive state
+
+count = 0
+jeneng = "Pengguna"
+
+gawe tambah(step)
+    nek step == kosong ya
+        step = 1
+    rampung
+    count = count + step
+rampung
+
+gawe kurang(step)
+    nek step == kosong ya
+        step = 1
+    rampung
+    count = count - step
+rampung
+`, name)
+
+	scriptPath := filepath.Join(dirLive, name+".ngpk")
+	if err := os.WriteFile(scriptPath, []byte(scriptContent), 0644); err != nil {
+		fmt.Printf("Gagal nggawe komponen RikatLive: %v\n", err)
+		return
+	}
+
+	// 2. Template Tampilan (.nview)
+	viewContent := fmt.Sprintf(`<div class="card p-4 border rounded shadow-sm bg-white">
+    <h3 class="text-lg font-bold mb-3">Komponen %s (Halo, {{ jeneng }}!)</h3>
+    
+    <div class="mb-3">
+        <label class="block text-sm text-gray-600 mb-1">Ganti Jeneng:</label>
+        <input type="text" r-model="jeneng" class="border px-3 py-2 rounded w-full" placeholder="Ketik jeneng..." />
+    </div>
+
+    <div class="flex items-center gap-3">
+        <button r-click="kurang(1)" class="btn btn-secondary px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">-</button>
+        <span class="text-xl font-bold px-3">{{ count }}</span>
+        <button r-click="tambah(1)" class="btn btn-primary px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">+</button>
+    </div>
+
+    <div r-loading class="text-xs text-blue-500 mt-2">Sedang memproses...</div>
+</div>
+`, name)
+
+	viewPath := filepath.Join(dirViews, lowerName+".nview")
+	if err := os.WriteFile(viewPath, []byte(viewContent), 0644); err != nil {
+		fmt.Printf("Gagal nggawe template komponen RikatLive: %v\n", err)
+		return
+	}
+
+	fmt.Printf(`✓ Komponen RikatLive '%s' sukses digawe sing resik 100%% NgapakIn (.ngpk & .nview)!
+  - Logika Komponen   : %s
+  - Tampilan Komponen : %s
+
+Cara pasang neng template sawangan (.nview):
+  @live("%s")
+`, name, filepath.ToSlash(scriptPath), filepath.ToSlash(viewPath), name)
+}
+
 func runMigrations() {
 	p := paths.GetPaths(".")
 	dir := p.Migrations
@@ -942,13 +1313,14 @@ func runSeeders() {
 
 func runQueueWorker() {
 	fmt.Println("Queue Worker aktif... [Pencet Ctrl+C nggo mandheg]")
-	q := queue.NewMemoryQueue()
+	q := queue.Default()
 	stopCh := make(chan struct{})
 	q.Work(stopCh)
 }
 
 func clearCache() {
 	_ = cache.ClearStorageCache("storage/cache")
+	cache.Default().Flush()
 	fmt.Println("✓ Cache sistem sukses diresiki kabeh.")
 }
 

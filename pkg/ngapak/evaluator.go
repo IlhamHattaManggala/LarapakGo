@@ -53,6 +53,15 @@ func (e *Environment) Assign(name string, val any) {
 	e.values[name] = val
 }
 
+// Values returns a copy of all local variables in this environment scope.
+func (e *Environment) Values() map[string]any {
+	res := make(map[string]any, len(e.values))
+	for k, v := range e.values {
+		res[k] = v
+	}
+	return res
+}
+
 func (e *Environment) assignExisting(name string, val any) bool {
 	if _, ok := e.values[name]; ok {
 		e.values[name] = val

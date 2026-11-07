@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/IlhamHattaManggala/larapak-go/pkg/rikatlive"
 )
 
 func TestEngineRenderString(t *testing.T) {
@@ -72,5 +74,68 @@ Kaca Utama LarapakGo
 	}
 	if !strings.Contains(out, "<main><h1>Halo Donya!</h1></main>") {
 		t.Fatalf("content section not yielded properly, got:\n%s", out)
+	}
+}
+
+type sampleLiveComponent struct{}
+
+func (s *sampleLiveComponent) Render() string {
+	return `<span class="live-status">Aktif Realtime</span>`
+}
+
+func TestEngineRikatLiveDirective(t *testing.T) {
+	rikatlive.Register("SampleLive", func() rikatlive.Component {
+		return &sampleLiveComponent{}
+	})
+
+	engine := New("")
+	tmpl := `<div class="box">
+    @live("SampleLive")
+</div>`
+
+	out, err := engine.RenderString(tmpl, nil)
+	if err != nil {
+		t.Fatalf("failed to render live directive: %v", err)
+	}
+
+	if !strings.Contains(out, `r-component="SampleLive"`) {
+		t.Fatalf("expected r-component in output:\n%s", out)
+	}
+	if !strings.Contains(out, `<span class="live-status">Aktif Realtime</span>`) {
+		t.Fatalf("expected component inner HTML in output:\n%s", out)
+	}
+}
+
+func TestEngineFlashAndSessionDirectives(t *testing.T) {
+	engine := New("")
+	tmpl := `<div class="container">
+    @flash("pesan")
+    <div class="alert alert-success">{{ message }}</div>
+    @endflash
+
+    @session("username")
+    <span class="user">{{ value }}</span>
+    @endsession
+</div>`
+
+	data := map[string]any{
+		"flash": map[string]string{
+			"pesan": "Operasi kasil!",
+		},
+		"session": map[string]any{
+			"username": "budi_ngapak",
+		},
+	}
+
+	out, err := engine.RenderString(tmpl, data)
+	if err != nil {
+		t.Fatalf("failed to render flash/session directives: %v", err)
+	}
+
+	if !strings.Contains(out, `<div class="alert alert-success">Operasi kasil!</div>`) {
+		t.Fatalf("expected flash alert in output:\n%s", out)
+	}
+	if !strings.Contains(out, `<span class="user">budi_ngapak</span>`) {
+		t.Fatalf("expected session span in output:\n%s", out)
 	}
 }

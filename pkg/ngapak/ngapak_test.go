@@ -245,4 +245,91 @@ rute.get("/", "HomeController@index")
 	}
 }
 
+func TestDbBridgeInNgapak(t *testing.T) {
+	app := larapak.New()
+	vEngine := view.New(t.TempDir())
+	ngpkEngine := NewEngine(t.TempDir(), vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	script := `
+sql = db.tabel("users").pilih("id", "jeneng").neng("status", "=", "aktif").wates(5).toSql()
+`
+	_, err := ngpkEngine.RunSource(script, "db_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource db test failed: %v", err)
+	}
+
+	val, ok := ngpkEngine.Evaluator.Globals.Get("sql")
+	if !ok {
+		t.Fatal("expected sql variable to be set in globals")
+	}
+	sqlStr, ok := val.(string)
+	if !ok || !strings.Contains(sqlStr, "SELECT id, jeneng FROM users WHERE status = ? LIMIT 5") {
+		t.Errorf("unexpected compiled SQL from NgapakIn: %s", sqlStr)
+	}
+}
+
+func TestSandiBridgeInNgapak(t *testing.T) {
+	app := larapak.New()
+	vEngine := view.New(t.TempDir())
+	ngpkEngine := NewEngine(t.TempDir(), vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	script := `
+hashSandi = sandi.gawe("rahasia123")
+isCocok = sandi.cocok("rahasia123", hashSandi)
+isSalah = sandi.cocok("salah123", hashSandi)
+`
+	_, err := ngpkEngine.RunSource(script, "sandi_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource sandi test failed: %v", err)
+	}
+
+	valCocok, ok := ngpkEngine.Evaluator.Globals.Get("isCocok")
+	if !ok || valCocok != true {
+		t.Errorf("expected isCocok to be true, got: %v", valCocok)
+	}
+
+	valSalah, ok := ngpkEngine.Evaluator.Globals.Get("isSalah")
+	if !ok || valSalah != false {
+		t.Errorf("expected isSalah to be false, got: %v", valSalah)
+	}
+}
+
+func TestFormInputAndRedirectInNgapak(t *testing.T) {
+	app := larapak.New()
+	vEngine := view.New(t.TempDir())
+	ngpkEngine := NewEngine(t.TempDir(), vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	script := `
+rute.post("/proses-login", gawe(req, res)
+    email = req.input("email")
+    nek email == "admin@ngapak.org" ya
+        balekna res.redirect("/dashboard")
+    liyane
+        balekna res.json({"pesan": "email ora cocok"})
+    rampung
+rampung)
+`
+	_, err := ngpkEngine.RunSource(script, "login_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource login test failed: %v", err)
+	}
+
+	// 1. Submit valid form POST
+	form := strings.NewReader("email=admin@ngapak.org&sandi=123")
+	req := httptest.NewRequest("POST", "/proses-login", form)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	app.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Errorf("expected 302 Found, got: %d", w.Code)
+	}
+	if w.Header().Get("Location") != "/dashboard" {
+		t.Errorf("expected Location /dashboard, got: %s", w.Header().Get("Location"))
+	}
+}
+
 

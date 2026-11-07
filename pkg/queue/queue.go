@@ -3,9 +3,41 @@ package queue
 import (
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 )
+
+// Queue defines the standard interface for LarapakGo queue drivers.
+type Queue interface {
+	Push(job Job) error
+	Pop() (Job, bool)
+	Work(stopCh <-chan struct{})
+}
+
+var (
+	defaultQueue Queue
+	queueOnce    sync.Once
+)
+
+// Default returns the active Queue driver based on QUEUE_DRIVER env variable.
+// Defaults to in-memory queue, or RedisQueue if set to "redis".
+func Default() Queue {
+	queueOnce.Do(func() {
+		driver := os.Getenv("QUEUE_DRIVER")
+		if driver == "redis" {
+			defaultQueue = NewRedisQueueFromEnv()
+		} else {
+			defaultQueue = NewMemoryQueue()
+		}
+	})
+	return defaultQueue
+}
+
+// SetDefaultQueue manually sets the global queue driver.
+func SetDefaultQueue(q Queue) {
+	defaultQueue = q
+}
 
 // Job defines the interface for executable background jobs in LarapakGo.
 type Job interface {
@@ -26,10 +58,11 @@ func NewMemoryQueue() *MemoryQueue {
 }
 
 // Push enqueues a new background job.
-func (q *MemoryQueue) Push(job Job) {
+func (q *MemoryQueue) Push(job Job) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.jobs = append(q.jobs, job)
+	return nil
 }
 
 // Pop dequeues the oldest job.

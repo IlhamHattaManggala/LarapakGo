@@ -4,11 +4,26 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"time"
 )
 
-// Logger returns a request logging middleware with execution timing.
+func appendLogToFile(line string) {
+	logDir := filepath.Join("storage", "logs")
+	if _, err := os.Stat(logDir); os.IsNotExist(err) {
+		_ = os.MkdirAll(logDir, 0755)
+	}
+	f, err := os.OpenFile(filepath.Join(logDir, "larapak.log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err == nil {
+		defer f.Close()
+		_, _ = f.WriteString(line + "\n")
+	}
+}
+
+// Logger returns a request logging middleware with execution timing and file logging.
 func Logger() MiddlewareFunc {
 	return func(next HandlerFunc) HandlerFunc {
 		return func(c *Context) error {
@@ -16,12 +31,16 @@ func Logger() MiddlewareFunc {
 			err := next(c)
 			duration := time.Since(start)
 
-			log.Printf("[LarapakGo] %s %s -> %d (%v)",
+			logMsg := fmt.Sprintf("[%s] [INFO] [LarapakGo] %s %s -> %d (%v) - IP: %s",
+				start.Format("2006-01-02 15:04:05"),
 				c.Method(),
 				c.Path(),
 				c.statusCode,
 				duration,
+				c.Request.RemoteAddr,
 			)
+			log.Print(logMsg)
+			appendLogToFile(logMsg)
 			return err
 		}
 	}
@@ -33,7 +52,30 @@ func Recover() MiddlewareFunc {
 		return func(c *Context) (err error) {
 			defer func() {
 				if r := recover(); r != nil {
-					log.Printf("[LarapakGo PANIC] %v\n%s", r, string(debug.Stack()))
+					panicMsg := fmt.Sprintf("[%s] [ERROR] [LarapakGo PANIC] %v\n%s",
+						time.Now().Format("2006-01-02 15:04:05"),
+						r,
+						string(debug.Stack()),
+					)
+					log.Print(panicMsg)
+					appendLogToFile(panicMsg)
+
+					// Check if custom 500 error view exists
+					if !c.IsAJAX() && !strings.HasPrefix(c.Path(), "/api/") {
+						for _, p := range []string{
+							filepath.Join("sawangan", "errors", "500.nview"),
+							filepath.Join("resources", "views", "errors", "500.nview"),
+							filepath.Join("tampilan", "errors", "500.nview"),
+						} {
+							if b, err := os.ReadFile(p); err == nil {
+								html := strings.ReplaceAll(string(b), "{{ error }}", fmt.Sprintf("%v", r))
+								html = strings.ReplaceAll(html, "{{ pesan }}", fmt.Sprintf("%v", r))
+								_ = c.HTML(http.StatusInternalServerError, html)
+								return
+							}
+						}
+					}
+
 					c.JSON(http.StatusInternalServerError, map[string]any{
 						"error":   "Internal Server Error",
 						"message": fmt.Sprintf("Kliru server internal: %v", r),

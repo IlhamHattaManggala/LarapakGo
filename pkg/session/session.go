@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -63,6 +64,17 @@ func (s *Session) Delete(key string) {
 	delete(s.values, key)
 }
 
+// All retrieves a copy of all stored session values.
+func (s *Session) All() map[string]any {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	copyValues := make(map[string]any, len(s.values))
+	for k, v := range s.values {
+		copyValues[k] = v
+	}
+	return copyValues
+}
+
 // Flash sets a one-time flash message for the next request.
 func (s *Session) Flash(key, message string) {
 	s.mu.Lock()
@@ -77,6 +89,35 @@ func (s *Session) GetFlash(key string) string {
 	msg := s.flashes[key]
 	delete(s.flashes, key)
 	return msg
+}
+
+// AllFlashes retrieves all flash messages and clears them from session.
+func (s *Session) AllFlashes() map[string]string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	copyFlashes := make(map[string]string, len(s.flashes))
+	for k, v := range s.flashes {
+		copyFlashes[k] = v
+	}
+	s.flashes = make(map[string]string)
+	return copyFlashes
+}
+
+var (
+	defaultManager     *Manager
+	defaultManagerOnce sync.Once
+)
+
+// DefaultManager returns a shared singleton session manager.
+func DefaultManager() *Manager {
+	defaultManagerOnce.Do(func() {
+		secret := os.Getenv("APP_KEY")
+		if secret == "" {
+			secret = "larapak_default_secret_key_ngapak_session"
+		}
+		defaultManager = NewManager(secret, 24*time.Hour)
+	})
+	return defaultManager
 }
 
 // Manager handles session lifecycles, cookies, and signing.

@@ -64,6 +64,36 @@
       "rampung"
     ],
     "description": "Perulangan baleni ... neng koleksi"
+  },
+  "Database Query Select": {
+    "prefix": "db:select",
+    "body": [
+      "db.tabel(\"${1:users}\").pilih(${2:\"id\", \"jeneng\"}).neng(\"${3:status}\", \"=\", \"${4:aktif}\").jupuk()"
+    ],
+    "description": "Query database fluent SELECT neng NgapakIn"
+  },
+  "Database Query Insert": {
+    "prefix": "db:insert",
+    "body": [
+      "db.tabel(\"${1:users}\").tambah([\"${2:jeneng}\": \"${3:Slamet}\"])"
+    ],
+    "description": "Query database fluent INSERT neng NgapakIn"
+  },
+  "Komponen RikatLive": {
+    "prefix": "urip:komponen",
+    "body": [
+      "# Komponen RikatLive ${1:Counter}",
+      "${2:count} = 0",
+      "${3:jeneng} = \"Pengguna\"",
+      "",
+      "gawe ${4:tambah}(step)",
+      "    nek step == kosong ya",
+      "        step = 1",
+      "    rampung",
+      "    ${2:count} = ${2:count} + step",
+      "rampung"
+    ],
+    "description": "Template skrip komponen reaktif RikatLive (.ngpk)"
   }
 }
 

@@ -1,20 +1,31 @@
 package database
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 )
 
-// QueryBuilder provides fluent SQL query construction with parameter binding.
+// QueryExecutor defines the database interface needed for QueryBuilder execution.
+type QueryExecutor interface {
+	Query(query string, args ...any) (*sql.Rows, error)
+	QueryRow(query string, args ...any) *sql.Row
+	Exec(query string, args ...any) (sql.Result, error)
+}
+
+// QueryBuilder provides fluent SQL query construction with parameter binding and dialect support.
 type QueryBuilder struct {
-	table      string
-	columns    []string
-	wheres     []whereClause
-	joins      []joinClause
-	orderBys   []string
-	limitVal   int
-	offsetVal  int
-	bindings   []any
+	table     string
+	columns   []string
+	wheres    []whereClause
+	joins     []joinClause
+	orderBys  []string
+	limitVal  int
+	offsetVal int
+	bindings  []any
+	dialect   Dialect
+	executor  QueryExecutor
 }
 
 type whereClause struct {
@@ -32,13 +43,36 @@ type joinClause struct {
 	second   string
 }
 
-// Table initiates a new QueryBuilder instance for a specified table name.
+// Table initiates a new QueryBuilder instance for a specified table name with default SQLite dialect.
 func Table(name string) *QueryBuilder {
 	return &QueryBuilder{
 		table:    name,
 		columns:  []string{"*"},
 		limitVal: -1,
+		dialect:  SQLiteDialect{},
 	}
+}
+
+// SetDialect overrides the active SQL dialect for this query.
+func (q *QueryBuilder) SetDialect(d Dialect) *QueryBuilder {
+	if d != nil {
+		q.dialect = d
+	}
+	return q
+}
+
+// Dialect returns the active SQL dialect.
+func (q *QueryBuilder) Dialect() Dialect {
+	if q.dialect == nil {
+		q.dialect = SQLiteDialect{}
+	}
+	return q.dialect
+}
+
+// SetExecutor assigns an active database connection or transaction executor.
+func (q *QueryBuilder) SetExecutor(e QueryExecutor) *QueryBuilder {
+	q.executor = e
+	return q
 }
 
 // Select specifies columns to retrieve.
@@ -128,8 +162,10 @@ func (q *QueryBuilder) Offset(offset int) *QueryBuilder {
 
 // ToSelectSQL compiles the builder into a parameterized SELECT query and its bound arguments.
 func (q *QueryBuilder) ToSelectSQL() (string, []any) {
+	d := q.Dialect()
 	var sb strings.Builder
 	var bindings []any
+	paramIdx := 1
 
 	sb.WriteString(fmt.Sprintf("SELECT %s FROM %s", strings.Join(q.columns, ", "), q.table))
 
@@ -145,7 +181,9 @@ func (q *QueryBuilder) ToSelectSQL() (string, []any) {
 			if i > 0 {
 				sb.WriteString(fmt.Sprintf(" %s ", w.boolean))
 			}
-			sb.WriteString(fmt.Sprintf("%s %s ?", w.column, w.operator))
+			ph := d.Placeholder(paramIdx)
+			paramIdx++
+			sb.WriteString(fmt.Sprintf("%s %s %s", w.column, w.operator, ph))
 			bindings = append(bindings, w.value)
 		}
 	}
@@ -155,12 +193,10 @@ func (q *QueryBuilder) ToSelectSQL() (string, []any) {
 		sb.WriteString(" ORDER BY " + strings.Join(q.orderBys, ", "))
 	}
 
-	// Limit & Offset
-	if q.limitVal >= 0 {
-		sb.WriteString(fmt.Sprintf(" LIMIT %d", q.limitVal))
-	}
-	if q.offsetVal > 0 {
-		sb.WriteString(fmt.Sprintf(" OFFSET %d", q.offsetVal))
+	// Limit & Offset per dialect
+	limitClause := d.CompileLimitOffset(q.limitVal, q.offsetVal)
+	if limitClause != "" {
+		sb.WriteString(limitClause)
 	}
 
 	return sb.String(), bindings
@@ -168,13 +204,16 @@ func (q *QueryBuilder) ToSelectSQL() (string, []any) {
 
 // ToInsertSQL compiles an INSERT statement.
 func (q *QueryBuilder) ToInsertSQL(data map[string]any) (string, []any) {
+	d := q.Dialect()
 	cols := make([]string, 0, len(data))
 	placeholders := make([]string, 0, len(data))
 	bindings := make([]any, 0, len(data))
+	paramIdx := 1
 
 	for k, v := range data {
 		cols = append(cols, k)
-		placeholders = append(placeholders, "?")
+		placeholders = append(placeholders, d.Placeholder(paramIdx))
+		paramIdx++
 		bindings = append(bindings, v)
 	}
 
@@ -188,11 +227,14 @@ func (q *QueryBuilder) ToInsertSQL(data map[string]any) (string, []any) {
 
 // ToUpdateSQL compiles an UPDATE statement based on active WHERE clauses.
 func (q *QueryBuilder) ToUpdateSQL(data map[string]any) (string, []any) {
+	d := q.Dialect()
 	setClauses := make([]string, 0, len(data))
 	bindings := make([]any, 0, len(data)+len(q.wheres))
+	paramIdx := 1
 
 	for k, v := range data {
-		setClauses = append(setClauses, fmt.Sprintf("%s = ?", k))
+		setClauses = append(setClauses, fmt.Sprintf("%s = %s", k, d.Placeholder(paramIdx)))
+		paramIdx++
 		bindings = append(bindings, v)
 	}
 
@@ -205,7 +247,9 @@ func (q *QueryBuilder) ToUpdateSQL(data map[string]any) (string, []any) {
 			if i > 0 {
 				sb.WriteString(fmt.Sprintf(" %s ", w.boolean))
 			}
-			sb.WriteString(fmt.Sprintf("%s %s ?", w.column, w.operator))
+			ph := d.Placeholder(paramIdx)
+			paramIdx++
+			sb.WriteString(fmt.Sprintf("%s %s %s", w.column, w.operator, ph))
 			bindings = append(bindings, w.value)
 		}
 	}
@@ -215,8 +259,10 @@ func (q *QueryBuilder) ToUpdateSQL(data map[string]any) (string, []any) {
 
 // ToDeleteSQL compiles a DELETE statement based on active WHERE clauses.
 func (q *QueryBuilder) ToDeleteSQL() (string, []any) {
+	d := q.Dialect()
 	var sb strings.Builder
 	var bindings []any
+	paramIdx := 1
 
 	sb.WriteString(fmt.Sprintf("DELETE FROM %s", q.table))
 
@@ -226,7 +272,9 @@ func (q *QueryBuilder) ToDeleteSQL() (string, []any) {
 			if i > 0 {
 				sb.WriteString(fmt.Sprintf(" %s ", w.boolean))
 			}
-			sb.WriteString(fmt.Sprintf("%s %s ?", w.column, w.operator))
+			ph := d.Placeholder(paramIdx)
+			paramIdx++
+			sb.WriteString(fmt.Sprintf("%s %s %s", w.column, w.operator, ph))
 			bindings = append(bindings, w.value)
 		}
 	}
@@ -234,3 +282,173 @@ func (q *QueryBuilder) ToDeleteSQL() (string, []any) {
 	return sb.String(), bindings
 }
 
+// -----------------------------------------------------------------------------
+// Live Database Execution Methods
+// -----------------------------------------------------------------------------
+
+func (q *QueryBuilder) checkExecutor() error {
+	if q.executor == nil {
+		return errors.New("database: no active database connection assigned to query builder")
+	}
+	return nil
+}
+
+// Get executes the compiled SELECT query and returns all matching rows as maps.
+func (q *QueryBuilder) Get() ([]map[string]any, error) {
+	if err := q.checkExecutor(); err != nil {
+		return nil, err
+	}
+
+	query, args := q.ToSelectSQL()
+	rows, err := q.executor.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	cols, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	var results []map[string]any
+	for rows.Next() {
+		columns := make([]any, len(cols))
+		columnPointers := make([]any, len(cols))
+		for i := range columns {
+			columnPointers[i] = &columns[i]
+		}
+
+		if err := rows.Scan(columnPointers...); err != nil {
+			return nil, err
+		}
+
+		rowMap := make(map[string]any)
+		for i, colName := range cols {
+			val := columnPointers[i].(*any)
+			// Unwrap byte slices into strings for cleaner JSON output
+			if b, ok := (*val).([]byte); ok {
+				rowMap[colName] = string(b)
+			} else {
+				rowMap[colName] = *val
+			}
+		}
+		results = append(results, rowMap)
+	}
+
+	return results, rows.Err()
+}
+
+// First executes the compiled query with LIMIT 1 and returns the first row.
+func (q *QueryBuilder) First() (map[string]any, error) {
+	q.Limit(1)
+	results, err := q.Get()
+	if err != nil {
+		return nil, err
+	}
+	if len(results) == 0 {
+		return nil, sql.ErrNoRows
+	}
+	return results[0], nil
+}
+
+// Count returns the total number of matching rows.
+func (q *QueryBuilder) Count() (int64, error) {
+	if err := q.checkExecutor(); err != nil {
+		return 0, err
+	}
+	origCols := q.columns
+	origLimit := q.limitVal
+	origOffset := q.offsetVal
+	q.columns = []string{"COUNT(*) as count"}
+	q.limitVal = -1
+	q.offsetVal = 0
+	defer func() {
+		q.columns = origCols
+		q.limitVal = origLimit
+		q.offsetVal = origOffset
+	}()
+
+	query, args := q.ToSelectSQL()
+	row := q.executor.QueryRow(query, args...)
+
+	var count int64
+	if err := row.Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// Paginate executes query with page and perPage parameters, returning a standardized pagination result map.
+func (q *QueryBuilder) Paginate(page, perPage int) (map[string]any, error) {
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 {
+		perPage = 15
+	}
+
+	total, err := q.Count()
+	if err != nil {
+		return nil, err
+	}
+
+	lastPage := int((total + int64(perPage) - 1) / int64(perPage))
+	if lastPage < 1 {
+		lastPage = 1
+	}
+
+	offset := (page - 1) * perPage
+	q.Limit(perPage)
+	q.Offset(offset)
+
+	data, err := q.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	from := offset + 1
+	to := offset + len(data)
+	if len(data) == 0 {
+		from = 0
+		to = 0
+	}
+
+	return map[string]any{
+		"data":         data,
+		"total":        total,
+		"per_page":     perPage,
+		"current_page": page,
+		"last_page":    lastPage,
+		"from":         from,
+		"to":           to,
+		"has_more":     page < lastPage,
+	}, nil
+}
+
+// Insert executes an INSERT statement with the provided key-value map.
+func (q *QueryBuilder) Insert(data map[string]any) (sql.Result, error) {
+	if err := q.checkExecutor(); err != nil {
+		return nil, err
+	}
+	query, args := q.ToInsertSQL(data)
+	return q.executor.Exec(query, args...)
+}
+
+// Update executes an UPDATE statement with the provided key-value map.
+func (q *QueryBuilder) Update(data map[string]any) (sql.Result, error) {
+	if err := q.checkExecutor(); err != nil {
+		return nil, err
+	}
+	query, args := q.ToUpdateSQL(data)
+	return q.executor.Exec(query, args...)
+}
+
+// Delete executes a DELETE statement based on current WHERE conditions.
+func (q *QueryBuilder) Delete() (sql.Result, error) {
+	if err := q.checkExecutor(); err != nil {
+		return nil, err
+	}
+	query, args := q.ToDeleteSQL()
+	return q.executor.Exec(query, args...)
+}
