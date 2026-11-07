@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/IlhamHattaManggala/LarapakGo/main/cmd/larapak/templates/public/images/logo.png" width="130" alt="LarapakGo Logo" />
+  <img src="https://raw.githubusercontent.com/IlhamHattaManggala/LarapakGo/main/public/favicon.png" width="140" alt="LarapakGo Logo" />
 </p>
 
 # LarapakGo
