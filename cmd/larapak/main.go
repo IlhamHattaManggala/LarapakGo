@@ -18,7 +18,7 @@ import (
 	"github.com/IlhamHattaManggala/larapak-go/pkg/view"
 )
 
-const version = "1.2.2"
+const version = "1.0.0"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -321,7 +321,7 @@ func serveDemoApp(port string) {
 
         <div class="spec-box">
             <div>Engine: <span class="spec-val">Go 1.25+</span></div>
-            <div>Versi: <span class="spec-val">v1.2.2</span></div>
+            <div>Versi: <span class="spec-val">v1.0.0</span></div>
             <div>Latency: <span class="spec-val">&lt; 0.5 ms</span></div>
         </div>
     </div>
@@ -470,7 +470,7 @@ func createNewProject(name, lang string) {
 
 go 1.25
 
-require github.com/IlhamHattaManggala/larapak-go v1.2.2
+require github.com/IlhamHattaManggala/larapak-go v1.0.0
 
 replace github.com/IlhamHattaManggala/larapak-go => %s
 `, name, relPath)
@@ -514,7 +514,7 @@ import (
 
 func main() {
 	app := larapak.New()
-	st := studio.New("%s", "1.2.2", "local", "http://localhost:8080")
+	st := studio.New("%s", "1.0.0", "local", "http://localhost:8080")
 
 	// Inisialisasi Sawangan (.nview) & Mesin NgapakIn (.ngpk)
 	p := paths.GetPaths(".")
@@ -642,7 +642,7 @@ rampung)
         <div class="spec-box">
             <div>Basa: <span class="spec-val">{{ bahasa }}</span></div>
             <div>Proyek: <span class="spec-val">{{ proyek }}</span></div>
-            <div>Engine: <span class="spec-val">LarapakGo v1.2.2</span></div>
+            <div>Engine: <span class="spec-val">LarapakGo v1.0.0</span></div>
         </div>
     </div>
 </body>

@@ -23,9 +23,9 @@ Ekstensi resmi Visual Studio Code untuk ekosistem **LarapakGo** dan bahasa skrip
 ### 1. Pasang Ekstensi VSIX
 Di terminal jalankan:
 ```bash
-code --install-extension larapak-vscode-1.2.2.vsix
+code --install-extension larapak-vscode-1.0.0.vsix
 ```
-*Atau di VS Code: Buka tab **Extensions (Ctrl+Shift+X)** -> Klik ikon titik tiga `...` di kanan atas -> Pilih **Install from VSIX...** -> Pilih berkas `larapak-vscode-1.2.2.vsix`.*
+*Atau di VS Code: Buka tab **Extensions (Ctrl+Shift+X)** -> Klik ikon titik tiga `...` di kanan atas -> Pilih **Install from VSIX...** -> Pilih berkas `larapak-vscode-1.0.0.vsix`.*
 
 ### 2. Menampilkan Logo Berkas di Explorer
 

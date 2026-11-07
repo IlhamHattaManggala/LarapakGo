@@ -31,7 +31,7 @@ func New(appName, version, env, baseURL string) *Studio {
 		appName = "LarapakGo Application"
 	}
 	if version == "" {
-		version = "1.2.2"
+		version = "1.0.0"
 	}
 	if env == "" {
 		env = "local"

@@ -165,7 +165,7 @@ rute.get("/salam", gawe(req, res)
 rampung)
 
 rute.get("/api/info", gawe(req, res)
-    balekna res.json(["status": "bener", "versi": "1.2.2"])
+    balekna res.json(["status": "bener", "versi": "1.0.0"])
 rampung)
 `
 	_, err := ngpkEngine.RunSource(routeScript, "web.ngpk")

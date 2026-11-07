@@ -31,12 +31,12 @@ curl -fsSL https://raw.githubusercontent.com/IlhamHattaManggala/LarapakGo/main/i
 Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) nyaman dengan pewarnaan sintaks dan autocomplete snippets, pasang ekstensi resmi **`larapak-vscode`**:
 
 ### Cara Pasang Ekstensi:
-1. Unduh berkas `larapak-vscode-1.2.2.vsix` dari folder `dist/` repositori ini.
+1. Unduh berkas `larapak-vscode-1.0.0.vsix` dari folder `dist/` repositori ini.
 2. Di terminal, jalankan perintah:
    ```bash
-   code --install-extension dist/larapak-vscode-1.2.2.vsix
+   code --install-extension dist/larapak-vscode-1.0.0.vsix
    ```
-   *Atau dari VS Code: Buka tab Extensions (`Ctrl+Shift+X`) -> Klik ikon menu `...` di kanan atas -> Pilih **Install from VSIX...** -> Pilih berkas `larapak-vscode-1.2.2.vsix`.*
+   *Atau dari VS Code: Buka tab Extensions (`Ctrl+Shift+X`) -> Klik ikon menu `...` di kanan atas -> Pilih **Install from VSIX...** -> Pilih berkas `larapak-vscode-1.0.0.vsix`.*
 
 ### Fitur Ekstensi:
 - **Logo Berkas Asli (File Icons)**: Berkas `.ngpk` dan `.nview` otomatis memiliki logo resmi Larapak (`favicon.png`) di explorer tree VS Code (tersedia tema ikon *Larapak File Icons*, dan mendukung integrasi *vscode-icons* serta *Material Icon Theme*).
@@ -155,7 +155,7 @@ func main() {
 			return c.JSON(http.StatusOK, map[string]any{
 				"status":  "aktif",
 				"pesan":   "Ora Ngapak Ora Kepenak",
-				"version": "1.2.2",
+				"version": "1.0.0",
 			})
 		})
 	})
@@ -178,10 +178,10 @@ LarapakGo/
 ├── install.sh                 # Skrip instalasi satu baris untuk Linux & macOS (Bash)
 ├── larapak.exe                # Binary mandiri root Windows
 ├── dist/                      # Rilis binary mandiri lintas platform & ekstensi
-│   ├── larapak-v1.2.2-windows-amd64.exe
-│   ├── larapak-v1.2.2-linux-amd64
-│   ├── larapak-v1.2.2-darwin-arm64
-│   └── larapak-vscode-1.2.2.vsix
+│   ├── larapak-v1.0.0-windows-amd64.exe
+│   ├── larapak-v1.0.0-linux-amd64
+│   ├── larapak-v1.0.0-darwin-arm64
+│   └── larapak-vscode-1.0.0.vsix
 ├── editors/
 │   └── vscode/                # Paket ekstensi Visual Studio Code untuk .ngpk & .nview
 │       ├── package.json

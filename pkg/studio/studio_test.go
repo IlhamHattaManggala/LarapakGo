@@ -9,7 +9,7 @@ import (
 )
 
 func TestStudioRegistrationAndOpenAPI(t *testing.T) {
-	st := New("Toko Larapak", "1.2.2", "local", "http://localhost:8080")
+	st := New("Toko Larapak", "1.0.0", "local", "http://localhost:8080")
 
 	st.RegisterRoute("GET", "/", "HomeController@index")
 	st.RegisterRoute("GET", "/users/:id", "UserController@show")

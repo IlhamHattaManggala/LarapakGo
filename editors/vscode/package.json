@@ -2,7 +2,7 @@
   "name": "larapak-vscode",
   "displayName": "Larapak & NgapakIn Language Support",
   "description": "Syntax highlighting, snippets, and language support for NgapakIn (.ngpk) scripts and Sawangan (.nview) templates in LarapakGo.",
-  "version": "1.2.2",
+  "version": "1.0.0",
   "publisher": "IlhamHattaManggala",
   "repository": {
     "type": "git",

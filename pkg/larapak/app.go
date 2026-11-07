@@ -20,7 +20,7 @@ func New() *App {
 	app := &App{
 		Router:  NewRouter(),
 		Name:    "LarapakGo Application",
-		Version: "1.2.2",
+		Version: "1.0.0",
 		Port:    "8080",
 	}
 
