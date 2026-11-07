@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"net/http"
 	"os"
@@ -21,7 +22,14 @@ import (
 const version = "1.0.0"
 
 func main() {
+	progName := strings.ToLower(filepath.Base(os.Args[0]))
+	progName = strings.TrimSuffix(progName, ".exe")
+
 	if len(os.Args) < 2 {
+		if progName == "ngapakin" {
+			startNgapakREPL()
+			return
+		}
 		serveDemoApp("8080")
 		return
 	}
@@ -29,15 +37,33 @@ func main() {
 	command := strings.ToLower(os.Args[1])
 	args := os.Args[2:]
 
+	// Multicall binary: nek jeneng eksekusine ngapakin.exe
+	if progName == "ngapakin" {
+		handleNgapakCommand(command, args)
+		return
+	}
+
 	switch command {
 	// =========================================================================
 	// 1. INFO & BANTUAN
 	// =========================================================================
 	case "version", "-v", "--version":
 		fmt.Printf("LarapakGo Framework v%s (Go Edition)\n", version)
+		fmt.Printf("NgapakIn Language Engine v%s (Native Built-in)\n", version)
 
 	case "help", "tulung", "--help", "-h":
 		showHelp()
+
+	case "ngapakin":
+		if len(args) == 0 {
+			startNgapakREPL()
+			return
+		}
+		handleNgapakCommand(strings.ToLower(args[0]), args[1:])
+		return
+
+	case "repl", "interaktif":
+		startNgapakREPL()
 
 	// =========================================================================
 	// 2. PROYEK & SERVER
@@ -166,6 +192,10 @@ func main() {
 		runTests()
 
 	default:
+		if strings.HasSuffix(command, ".ngpk") {
+			runNgapakScript(os.Args[1])
+			return
+		}
 		fmt.Printf("Perintah '%s' ora dingerteni. Ketik 'larapak tulung' nggo ndeleng panduan lengkap.\n", command)
 		os.Exit(1)
 	}
@@ -227,12 +257,14 @@ Perintah Dialek Ngapak (Asli):
   larapak rikat:rakit                           (Kompilasi Rikat CSS JIT)
   larapak coba                                  (Jalankna kabeh test suite)
   larapak mlakukna <berkas.ngpk>                (Jalankna skrip basa NgapakIn)
+  larapak repl                                  (Terminal interaktif NgapakIn)
+  larapak ngapakin [run/repl/-v]                (Sub-perintah mesin basa NgapakIn)
   larapak tulung                                (Ndeleng panduan kiye)
 
 Perintah Standar (Laravel Artisan Style):
   larapak new, serve, route:list, make:controller, make:model, make:migration,
   make:middleware, make:job, make:seeder, migrate, migrate:fresh, migrate:status,
-  rollback, db:seed, queue:work, cache:clear, css:build, run, test, help, version
+  rollback, db:seed, queue:work, cache:clear, css:build, run, repl, test, help, version
 
 Dokumentasi Resmi: https://larapak.my.id
 `, version)
@@ -250,6 +282,66 @@ func runNgapakScript(filePath string) {
 	routes := app.Routes()
 	if len(routes) > 0 {
 		fmt.Printf("✓ Sukses ngunggah lan mriksa %d rute saka %s\n", len(routes), filepath.ToSlash(filePath))
+	}
+}
+
+func startNgapakREPL() {
+	fmt.Printf(`
+   _  __                __   ____     
+  / |/ /__ ____ ____  ___ _/ /__/  _/__ 
+ /    / _ '/ _ '/ _ \/ _ '/ //_// / / _ \
+/_/|_/\_, /\_,_/ .__/\_,_/\__,_//_/_/_//_/
+     /___/    /_/                         
+  NgapakIn Language REPL v%s (All-in-One LarapakGo)
+  Ora Ngapak Ora Kepenak!
+  Ketik 'metu' utawa pencet Ctrl+C nggo metu.
+
+`, version)
+
+	scanner := bufio.NewScanner(os.Stdin)
+	eng := ngapak.NewEngine(".", nil)
+
+	for {
+		fmt.Print("ngapak>>> ")
+		if !scanner.Scan() {
+			break
+		}
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		if line == "metu" || line == "exit" || line == "quit" {
+			fmt.Println("Matur nuwun, rampung.")
+			break
+		}
+
+		res, err := eng.RunSource(line, "repl")
+		if err != nil {
+			fmt.Printf("Kliru: %v\n", err)
+		} else if res != nil {
+			fmt.Println(res)
+		}
+	}
+}
+
+func handleNgapakCommand(cmd string, args []string) {
+	switch cmd {
+	case "-v", "--version", "version", "versi":
+		fmt.Printf("NgapakIn Language Engine v%s (Go Edition)\n", version)
+	case "repl", "interaktif":
+		startNgapakREPL()
+	case "run", "mlakukna", "eksekusi":
+		if len(args) < 1 {
+			fmt.Println("Kliru: Kudune ana path berkas .ngpk. Contohe: larapak ngapakin run skrip.ngpk")
+			os.Exit(1)
+		}
+		runNgapakScript(args[0])
+	default:
+		if strings.HasSuffix(cmd, ".ngpk") {
+			runNgapakScript(cmd)
+		} else {
+			fmt.Printf("Kliru: Perintah ngapakin '%s' ora dingerteni.\n", cmd)
+		}
 	}
 }
 
