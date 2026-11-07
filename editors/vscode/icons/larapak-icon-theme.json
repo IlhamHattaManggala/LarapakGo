@@ -1,0 +1,56 @@
+{
+  "iconDefinitions": {
+    "_file": {
+      "iconPath": "./file.svg"
+    },
+    "_folder": {
+      "iconPath": "./folder.svg"
+    },
+    "_folder_open": {
+      "iconPath": "./folder-open.svg"
+    },
+    "_ngpk": {
+      "iconPath": "./ngpk.svg"
+    },
+    "_nview": {
+      "iconPath": "./nview.svg"
+    },
+    "_go": {
+      "iconPath": "./go.svg"
+    },
+    "_json": {
+      "iconPath": "./json.svg"
+    },
+    "_md": {
+      "iconPath": "./md.svg"
+    },
+    "_css": {
+      "iconPath": "./css.svg"
+    },
+    "_sql": {
+      "iconPath": "./sql.svg"
+    },
+    "_env": {
+      "iconPath": "./env.svg"
+    }
+  },
+  "file": "_file",
+  "folder": "_folder",
+  "folderExpanded": "_folder_open",
+  "fileExtensions": {
+    "ngpk": "_ngpk",
+    "nview": "_nview",
+    "go": "_go",
+    "json": "_json",
+    "md": "_md",
+    "css": "_css",
+    "sql": "_sql",
+    "env": "_env",
+    "mod": "_go",
+    "sum": "_go"
+  },
+  "languageIds": {
+    "ngapak": "_ngpk",
+    "nview": "_nview"
+  }
+}

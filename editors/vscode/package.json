@@ -23,6 +23,7 @@
     "sawangan",
     "template"
   ],
+  "icon": "./icons/ngpk.svg",
   "contributes": {
     "languages": [
       {
@@ -35,7 +36,11 @@
         "extensions": [
           ".ngpk"
         ],
-        "configuration": "./language-configuration-ngpk.json"
+        "configuration": "./language-configuration-ngpk.json",
+        "icon": {
+          "light": "./icons/ngpk.svg",
+          "dark": "./icons/ngpk.svg"
+        }
       },
       {
         "id": "nview",
@@ -46,7 +51,18 @@
         "extensions": [
           ".nview"
         ],
-        "configuration": "./language-configuration-nview.json"
+        "configuration": "./language-configuration-nview.json",
+        "icon": {
+          "light": "./icons/nview.svg",
+          "dark": "./icons/nview.svg"
+        }
+      }
+    ],
+    "iconThemes": [
+      {
+        "id": "larapak-icons",
+        "label": "Larapak File Icons",
+        "path": "./icons/larapak-icon-theme.json"
       }
     ],
     "grammars": [
@@ -73,3 +89,4 @@
     ]
   }
 }
+

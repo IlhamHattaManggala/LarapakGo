@@ -7,6 +7,7 @@ content_types = """<?xml version="1.0" encoding="utf-8"?>
   <Default Extension="md" ContentType="text/markdown"/>
   <Default Extension="vsixmanifest" ContentType="text/xml"/>
   <Default Extension="txt" ContentType="text/plain"/>
+  <Default Extension="svg" ContentType="image/svg+xml"/>
 </Types>
 """
 
@@ -15,7 +16,8 @@ vsix_manifest = """<?xml version="1.0" encoding="utf-8"?>
   <Metadata>
     <Identity Id="larapak-vscode" Version="1.2.2" Language="en-US" Publisher="IlhamHattaManggala"/>
     <DisplayName>Larapak &amp; NgapakIn Language Support</DisplayName>
-    <Description xml:space="preserve">Syntax highlighting, snippets, and language support for NgapakIn (.ngpk) scripts and Sawangan (.nview) templates in LarapakGo.</Description>
+    <Description xml:space="preserve">Syntax highlighting, file icons, snippets, and language support for NgapakIn (.ngpk) scripts and Sawangan (.nview) templates in LarapakGo.</Description>
+    <Icon>extension/icons/ngpk.svg</Icon>
     <Categories>Programming Languages,Snippets</Categories>
   </Metadata>
   <Installation>
@@ -26,6 +28,7 @@ vsix_manifest = """<?xml version="1.0" encoding="utf-8"?>
     <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true"/>
     <Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/README.md" Addressable="true"/>
     <Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/LICENSE" Addressable="true"/>
+    <Asset Type="Microsoft.VisualStudio.Services.Icons.Default" Path="extension/icons/ngpk.svg" Addressable="true"/>
   </Assets>
 </PackageManifest>
 """
@@ -48,6 +51,11 @@ with zipfile.ZipFile(os.path.join(root_dir, output_vsix), "w", zipfile.ZIP_DEFLA
         os.path.join("snippets", "ngapak.json"),
         os.path.join("snippets", "nview.json"),
     ]
+
+    icons_dir = os.path.join(root_dir, "icons")
+    if os.path.exists(icons_dir):
+        for icon_file in os.listdir(icons_dir):
+            files_to_pack.append(os.path.join("icons", icon_file))
     
     for f in files_to_pack:
         file_path = os.path.join(root_dir, f)

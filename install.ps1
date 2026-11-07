@@ -97,3 +97,4 @@ if (Test-Path $TargetExe) {
     Write-Host "[Kliru] Berkas eksekusi ora ditemokna sawise instalasi." -ForegroundColor Red
     exit 1
 }
+

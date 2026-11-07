@@ -39,6 +39,7 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
    *Atau dari VS Code: Buka tab Extensions (`Ctrl+Shift+X`) -> Klik ikon menu `...` di kanan atas -> Pilih **Install from VSIX...** -> Pilih berkas `larapak-vscode-1.2.2.vsix`.*
 
 ### Fitur Ekstensi:
+- **Logo Berkas Asli (File Icons)**: Berkas `.ngpk` dan `.nview` otomatis memiliki logo resmi Larapak (`favicon.png`) di explorer tree VS Code (tersedia tema ikon *Larapak File Icons*, dan mendukung integrasi *vscode-icons* serta *Material Icon Theme*).
 - **Pewarnaan Sintaks `.ngpk`**: Menyorot seluruh kata kunci (`nek`, `ya`, `liyane`, `rampung`, `baleni`, `saka`, `nganti`, `gawe`, `balekna`, `kelas`, `extends`, `mandeg`, `terusna`), operator logika (`lan`, `utawa`, `ora`, `neng`), konstanta (`bener`, `salah`, `kosong`), serta objek bawaan web (`rute`, `req`, `res`, `tulis`).
 - **Pewarnaan Sintaks `.nview`**: Menyorot direktif template (`@layout`, `@section`, `@endsection`, `@yield`, `@csrf`, `@include`) dan interpolasi variabel (`{{ var }}`, `{!! raw !!}`).
 - **Snippets Produktif**:

@@ -129,3 +129,4 @@ else
     echo "[Kliru] Berkas eksekusi ora ditemokna sawise instalasi."
     exit 1
 fi
+
