@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/IlhamHattaManggala/larapak-go/pkg/larapak"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/paths"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/studio"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/view"
 )
@@ -228,10 +229,13 @@ func (eng *Engine) createContextBridge(c *larapak.Context) (map[string]any, map[
 
 func (eng *Engine) invokeControllerMethod(ctrlName, methodName string, req, res map[string]any) error {
 	// Look for controller .ngpk file in known directory structures
+	pPaths := paths.GetPaths(eng.baseDir)
 	candidates := []string{
+		filepath.Join(pPaths.Controllers, ctrlName+".ngpk"),
 		filepath.Join(eng.baseDir, "jeroan", "Pangatur", ctrlName+".ngpk"),
 		filepath.Join(eng.baseDir, "aplikasi", "Pengendali", ctrlName+".ngpk"),
 		filepath.Join(eng.baseDir, "app", "Controllers", ctrlName+".ngpk"),
+		filepath.Join(eng.baseDir, "app", "Http", "Controllers", ctrlName+".ngpk"),
 	}
 
 	var foundPath string

@@ -198,3 +198,51 @@ rampung)
 	}
 }
 
+func TestBridgeRouteWithControllerNgpk(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// 1. Create a sample .nview template
+	viewsDir := filepath.Join(tmpDir, "resources", "views")
+	_ = os.MkdirAll(viewsDir, 0755)
+	tplContent := `<h1>Sugeng Rawuh {{ title }}</h1>`
+	_ = os.WriteFile(filepath.Join(viewsDir, "index.nview"), []byte(tplContent), 0644)
+
+	// 2. Create HomeController.ngpk in app/Controllers
+	ctrlDir := filepath.Join(tmpDir, "app", "Controllers")
+	_ = os.MkdirAll(ctrlDir, 0755)
+	ctrlContent := `# HomeController
+gawe index(req, res)
+    balekna res.view("index", ["title": "Larapak NgapakIn"])
+rampung
+`
+	_ = os.WriteFile(filepath.Join(ctrlDir, "HomeController.ngpk"), []byte(ctrlContent), 0644)
+
+	// 3. Setup Larapak App & Ngapak Engine
+	app := larapak.New()
+	vEngine := view.New(viewsDir)
+	ngpkEngine := NewEngine(tmpDir, vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	// 4. Run route that references "HomeController@index"
+	routeScript := `
+rute.get("/", "HomeController@index")
+`
+	_, err := ngpkEngine.RunSource(routeScript, "web.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource failed: %v", err)
+	}
+
+	// 5. Test GET /
+	req := httptest.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+	app.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "Sugeng Rawuh Larapak NgapakIn") {
+		t.Errorf("unexpected body: %s", w.Body.String())
+	}
+}
+
+

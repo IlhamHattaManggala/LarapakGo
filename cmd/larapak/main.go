@@ -383,15 +383,22 @@ func serveDemoApp(port string) {
 
 	// Auto-detect lan pasang rute .ngpk nek ana neng proyek
 	p := paths.GetPaths(".")
+	vEngine := view.New(p.Views)
+	ngpkEng := ngapak.NewEngine(".", vEngine)
+	ngpkEng.BindRoutesWithStudio(app, st)
+
 	ngpkRouteFile := filepath.Join(p.Routes, "web.ngpk")
 	hasNgpkRoutes := false
 	if _, err := os.Stat(ngpkRouteFile); err == nil {
-		vEngine := view.New(p.Views)
-		ngpkEng := ngapak.NewEngine(".", vEngine)
-		ngpkEng.BindRoutesWithStudio(app, st)
 		if _, err := ngpkEng.RunFile(ngpkRouteFile); err == nil {
 			hasNgpkRoutes = true
 			fmt.Printf("[Rute] Sukses ngunggah rute Ngapak saka %s\n", filepath.ToSlash(ngpkRouteFile))
+		}
+	}
+	ngpkApiFile := filepath.Join(p.Routes, "api.ngpk")
+	if _, err := os.Stat(ngpkApiFile); err == nil {
+		if _, err := ngpkEng.RunFile(ngpkApiFile); err == nil {
+			fmt.Printf("[Rute] Sukses ngunggah rute API saka %s\n", filepath.ToSlash(ngpkApiFile))
 		}
 	}
 
@@ -403,25 +410,68 @@ func serveDemoApp(port string) {
 		st.RegisterRoute("GET", "/", "HomeController@Index")
 	}
 
-	// Static assets handler nggo mode demo
-	app.GET("/css/rikat.css", func(c *larapak.Context) error {
-		c.Header("Content-Type", "text/css; charset=utf-8")
-		return c.String(http.StatusOK, "%s", templateRikatCSS)
+	// Static assets handler nggo mode serve (priksa disk ndisit, nembe fallback embed)
+	app.GET("/css/*file", func(c *larapak.Context) error {
+		file := c.Param("file")
+		diskPath := filepath.Join(p.PublicCSS, file)
+		if _, err := os.Stat(diskPath); err == nil {
+			http.ServeFile(c.Writer, c.Request, diskPath)
+			return nil
+		}
+		if file == "rikat.css" || file == "larapak.css" || file == "style.css" {
+			c.Header("Content-Type", "text/css; charset=utf-8")
+			return c.String(http.StatusOK, "%s", templateRikatCSS)
+		}
+		return c.String(http.StatusNotFound, "File not found")
 	})
-	app.GET("/js/rikat.js", func(c *larapak.Context) error {
-		c.Header("Content-Type", "application/javascript; charset=utf-8")
-		return c.String(http.StatusOK, "%s", templateRikatJS)
+	app.GET("/js/*file", func(c *larapak.Context) error {
+		file := c.Param("file")
+		diskPath := filepath.Join(p.PublicJS, file)
+		if _, err := os.Stat(diskPath); err == nil {
+			http.ServeFile(c.Writer, c.Request, diskPath)
+			return nil
+		}
+		if file == "rikat.js" {
+			c.Header("Content-Type", "application/javascript; charset=utf-8")
+			return c.String(http.StatusOK, "%s", templateRikatJS)
+		}
+		return c.String(http.StatusNotFound, "File not found")
 	})
-	app.GET("/images/logo.png", func(c *larapak.Context) error {
-		c.Header("Content-Type", "image/png")
-		c.Writer.WriteHeader(http.StatusOK)
-		_, err := c.Writer.Write(templateLogoPNG)
-		return err
+	app.GET("/images/*file", func(c *larapak.Context) error {
+		file := c.Param("file")
+		diskPath := filepath.Join(p.PublicImages, file)
+		if _, err := os.Stat(diskPath); err == nil {
+			http.ServeFile(c.Writer, c.Request, diskPath)
+			return nil
+		}
+		if file == "logo.png" {
+			c.Header("Content-Type", "image/png")
+			c.Writer.WriteHeader(http.StatusOK)
+			_, err := c.Writer.Write(templateLogoPNG)
+			return err
+		}
+		return c.String(http.StatusNotFound, "File not found")
 	})
 	app.GET("/favicon.ico", func(c *larapak.Context) error {
+		diskPath := filepath.Join(p.Public, "favicon.ico")
+		if _, err := os.Stat(diskPath); err == nil {
+			http.ServeFile(c.Writer, c.Request, diskPath)
+			return nil
+		}
 		c.Header("Content-Type", "image/x-icon")
 		c.Writer.WriteHeader(http.StatusOK)
 		_, err := c.Writer.Write(templateFaviconICO)
+		return err
+	})
+	app.GET("/favicon.png", func(c *larapak.Context) error {
+		diskPath := filepath.Join(p.Public, "favicon.png")
+		if _, err := os.Stat(diskPath); err == nil {
+			http.ServeFile(c.Writer, c.Request, diskPath)
+			return nil
+		}
+		c.Header("Content-Type", "image/png")
+		c.Writer.WriteHeader(http.StatusOK)
+		_, err := c.Writer.Write(templateLogoPNG)
 		return err
 	})
 
@@ -548,32 +598,6 @@ func createNewProject(name, lang string) {
 		}
 	}
 
-	cwd, _ := os.Getwd()
-	frameworkAbs := cwd
-	if !strings.HasSuffix(frameworkAbs, "LarapakGo") {
-		frameworkAbs = filepath.Join(frameworkAbs, "LarapakGo")
-	}
-	targetAbs, _ := filepath.Abs(name)
-	relPath, err := filepath.Rel(targetAbs, frameworkAbs)
-	if err != nil || relPath == "" {
-		relPath = "../"
-	}
-	relPath = filepath.ToSlash(relPath)
-
-	goModContent := fmt.Sprintf(`module %s
-
-go 1.25
-
-require github.com/IlhamHattaManggala/larapak-go v1.0.0
-
-replace github.com/IlhamHattaManggala/larapak-go => %s
-`, name, relPath)
-	_ = os.WriteFile(filepath.Join(name, "go.mod"), []byte(goModContent), 0644)
-
-	ctrlRelPath := filepath.ToSlash(paths.Config[lang].Controllers)
-	ctrlPkg := paths.PackageName(paths.Config[lang].Controllers)
-	modelPkg := paths.PackageName(paths.Config[lang].Models)
-
 	welcomeGreeting := "Selamat Teka neng Proyek LarapakGo!"
 	statusMsg := "Ora Ngapak Ora Kepenak"
 	readmeDesc := "Proyek aplikasi web LarapakGo sing digawe nganggo struktur dialek Ngapak Tegalan."
@@ -590,183 +614,82 @@ replace github.com/IlhamHattaManggala/larapak-go => %s
 		stepText = "Next steps:"
 	}
 
-	mainGo := fmt.Sprintf(`package main
-
-import (
-	"fmt"
-	"net/http"
-	"os"
-	"path/filepath"
-
-	"github.com/IlhamHattaManggala/larapak-go/pkg/larapak"
-	"github.com/IlhamHattaManggala/larapak-go/pkg/ngapak"
-	"github.com/IlhamHattaManggala/larapak-go/pkg/paths"
-	"github.com/IlhamHattaManggala/larapak-go/pkg/studio"
-	"github.com/IlhamHattaManggala/larapak-go/pkg/view"
-	"%s/%s"
-)
-
-func main() {
-	app := larapak.New()
-	st := studio.New("%s", "1.0.0", "local", "http://localhost:8080")
-
-	// Inisialisasi Sawangan (.nview) & Mesin NgapakIn (.ngpk)
-	p := paths.GetPaths(".")
-	vEngine := view.New(p.Views)
-	ngpkEng := ngapak.NewEngine(".", vEngine)
-	ngpkEng.BindRoutesWithStudio(app, st)
-
-	// Muat rute .ngpk nek ana
-	ngpkRouteFile := filepath.Join(p.Routes, "web.ngpk")
-	hasNgpkRoutes := false
-	if _, err := os.Stat(ngpkRouteFile); err == nil {
-		if _, err := ngpkEng.RunFile(ngpkRouteFile); err == nil {
-			hasNgpkRoutes = true
-			fmt.Printf("[Rute] Sukses ngunggah rute Ngapak saka %%s\n", filepath.ToSlash(ngpkRouteFile))
-		}
-	}
-
-	if !hasNgpkRoutes {
-		homeCtrl := &%s.HomeController{}
-		app.GET("/", homeCtrl.Index)
-		st.RegisterRoute("GET", "/", "HomeController@Index")
-	}
-
-	// Layani berkas statis (css, js, images, favicon)
-	app.GET("/css/*file", func(c *larapak.Context) error {
-		filePath := filepath.Join(p.PublicCSS, c.Param("file"))
-		http.ServeFile(c.Writer, c.Request, filePath)
-		return nil
-	})
-	app.GET("/js/*file", func(c *larapak.Context) error {
-		filePath := filepath.Join(p.PublicJS, c.Param("file"))
-		http.ServeFile(c.Writer, c.Request, filePath)
-		return nil
-	})
-	app.GET("/images/*file", func(c *larapak.Context) error {
-		filePath := filepath.Join(p.PublicImages, c.Param("file"))
-		http.ServeFile(c.Writer, c.Request, filePath)
-		return nil
-	})
-	app.GET("/favicon.ico", func(c *larapak.Context) error {
-		http.ServeFile(c.Writer, c.Request, filepath.Join(p.Public, "favicon.ico"))
-		return nil
-	})
-
-	app.Group("/api", func(r *larapak.Router) {
-		r.GET("/status", func(c *larapak.Context) error {
-			return c.JSON(http.StatusOK, map[string]string{
-				"status": "aktif",
-				"pesan":  "%s",
-				"bahasa": "%s",
-				"proyek": "%s",
-			})
-		})
-	})
-	st.RegisterRoute("GET", "/api/status", "APIController@Status")
-
-	app.GET("/_studio", func(c *larapak.Context) error {
-		st.Handler().ServeHTTP(c.Writer, c.Request)
-		return nil
-	})
-	app.GET("/_studio/openapi.json", func(c *larapak.Context) error {
-		st.Handler().ServeHTTP(c.Writer, c.Request)
-		return nil
-	})
-
-	fmt.Println("\nAplikasi LarapakGo mlaku neng: http://localhost:8080")
-	fmt.Println("Route & API Studio aktif neng : http://localhost:8080/_studio\n")
-	if err := app.Run(":8080"); err != nil {
-		fmt.Fprintf(os.Stderr, "Kliru: %%v\n", err)
-	}
-}
-`, name, ctrlRelPath, name, ctrlPkg, statusMsg, lang, name)
-	_ = os.WriteFile(filepath.Join(name, "main.go"), []byte(mainGo), 0644)
-
-	// Berkas rute NgapakIn (web.ngpk)
+	// 1. Berkas rute NgapakIn (web.ngpk & api.ngpk)
 	webNgpkContent := `# ==============================================================================
-# Dalane Rute Aplikasi LarapakGo (.ngpk)
+# Dalane Rute Web LarapakGo (.ngpk)
 # Ora Ngapak Ora Kepenak!
 # ==============================================================================
 
-rute.get("/", gawe(req, res)
-    balekna res.view("index", {
-        "title": "` + welcomeGreeting + `",
-        "judul": "` + welcomeGreeting + `",
-        "pesan": "` + statusMsg + `",
-        "bahasa": "` + lang + `",
-        "proyek": "` + name + `",
-        "versi": "1.0.0"
-    })
-rampung)
-
-rute.get("/api/status", gawe(req, res)
-    balekna res.json({
-        "status": "sukses",
-        "pesan": "Halo saka rute NgapakIn (.ngpk) native Go!",
-        "bahasa": "` + lang + `",
-        "proyek": "` + name + `"
-    })
-rampung)
+rute.get("/", "HomeController@index")
+rute.get("/status", "HomeController@status")
 `
 	_ = os.WriteFile(filepath.Join(p.Routes, "web.ngpk"), []byte(webNgpkContent), 0644)
 
-	// Berkas template Sawangan (.nview) identik persis karo edisi Python
+	apiNgpkContent := fmt.Sprintf(`# ==============================================================================
+# Dalane Rute API LarapakGo (.ngpk)
+# ==============================================================================
+
+rute.get("/status", gawe(req, res)
+    balekna res.json({
+        "status": "sukses",
+        "pesan": "Halo saka rute API NgapakIn (.ngpk) native Go!",
+        "bahasa": "%s",
+        "proyek": "%s",
+        "author": "Ilham Hatta Manggala"
+    })
+rampung)
+`, lang, name)
+	_ = os.WriteFile(filepath.Join(p.Routes, "api.ngpk"), []byte(apiNgpkContent), 0644)
+
+	// 2. Berkas HomeController.ngpk neng p.Controllers
+	homeCtrlContent := fmt.Sprintf(`# HomeController nggo %s
+gawe index(req, res)
+    balekna res.view("index", {
+        "title": "%s",
+        "judul": "%s",
+        "pesan": "%s",
+        "bahasa": "%s",
+        "proyek": "%s",
+        "versi": "1.0.0"
+    })
+rampung
+
+gawe status(req, res)
+    balekna res.json({
+        "status": "aktif",
+        "pesan": "%s",
+        "bahasa": "%s",
+        "proyek": "%s",
+        "versi": "1.0.0"
+    })
+rampung
+`, name, welcomeGreeting, welcomeGreeting, statusMsg, lang, name, statusMsg, lang, name)
+	_ = os.WriteFile(filepath.Join(p.Controllers, "HomeController.ngpk"), []byte(homeCtrlContent), 0644)
+
+	// 3. Berkas Model User.ngpk neng p.Models
+	userModelContent := `# Model User nggo LarapakGo
+
+kelas User extends Model
+    tabel = "users"
+    bisa_diisi = ["id", "jeneng", "email", "password"]
+rampung
+`
+	_ = os.WriteFile(filepath.Join(p.Models, "User.ngpk"), []byte(userModelContent), 0644)
+
+	// 4. Berkas template Sawangan (.nview) identik persis karo edisi Python
 	_ = os.WriteFile(filepath.Join(p.Views, "layout.nview"), []byte(templateLayoutNview), 0644)
 	_ = os.WriteFile(filepath.Join(p.Views, "index.nview"), []byte(templateIndexNview), 0644)
 
-	// Berkas static assets publik
+	// 5. Berkas static assets publik
 	_ = os.WriteFile(filepath.Join(p.PublicCSS, "rikat.css"), []byte(templateRikatCSS), 0644)
+	_ = os.WriteFile(filepath.Join(p.PublicCSS, "larapak.css"), []byte(templateRikatCSS), 0644)
+	_ = os.WriteFile(filepath.Join(p.PublicCSS, "style.css"), []byte(templateRikatCSS), 0644)
 	_ = os.WriteFile(filepath.Join(p.PublicJS, "rikat.js"), []byte(templateRikatJS), 0644)
 	_ = os.WriteFile(filepath.Join(p.PublicImages, "logo.png"), templateLogoPNG, 0644)
+	_ = os.WriteFile(filepath.Join(p.Public, "favicon.png"), templateLogoPNG, 0644)
 	_ = os.WriteFile(filepath.Join(p.Public, "favicon.ico"), templateFaviconICO, 0644)
 
-	homeCtrlContent := fmt.Sprintf(`package %s
-
-import (
-	"net/http"
-
-	"github.com/IlhamHattaManggala/larapak-go/pkg/larapak"
-	"github.com/IlhamHattaManggala/larapak-go/pkg/paths"
-	"github.com/IlhamHattaManggala/larapak-go/pkg/view"
-)
-
-type HomeController struct{}
-
-func (h *HomeController) Index(c *larapak.Context) error {
-	p := paths.GetPaths(".")
-	vEngine := view.New(p.Views)
-	html, err := vEngine.RenderTemplate("index", map[string]any{
-		"title":  "Sugeng Rawuh",
-		"judul":  "Sugeng Rawuh",
-		"pesan":  "%s",
-		"bahasa": "%s",
-		"proyek": "%s",
-		"versi":  "1.0.0",
-	})
-	if err != nil {
-		return c.String(http.StatusInternalServerError, "Gagal render view: %%v", err)
-	}
-	return c.HTML(http.StatusOK, html)
-}
-`, ctrlPkg, statusMsg, lang, name)
-	_ = os.WriteFile(filepath.Join(p.Controllers, "HomeController.go"), []byte(homeCtrlContent), 0644)
-
-	userModelContent := fmt.Sprintf(`package %s
-
-import "time"
-
-type User struct {
-	ID        int64     `+"`json:\"id\"`"+`
-	Name      string    `+"`json:\"name\"`"+`
-	Email     string    `+"`json:\"email\"`"+`
-	Password  string    `+"`json:\"-\"`"+`
-	CreatedAt time.Time `+"`json:\"created_at\"`"+`
-	UpdatedAt time.Time `+"`json:\"updated_at\"`"+`
-}
-`, modelPkg)
-	_ = os.WriteFile(filepath.Join(p.Models, "User.go"), []byte(userModelContent), 0644)
-
+	// 6. Konfigurasi Lingkungan (.env)
 	envContent := fmt.Sprintf(`APP_NAME=%s
 APP_ENV=local
 APP_DEBUG=true
@@ -778,9 +701,10 @@ DB_DATABASE=storage/database.sqlite
 	_ = os.WriteFile(filepath.Join(name, ".env"), []byte(envContent), 0644)
 	_ = os.WriteFile(filepath.Join(name, ".env.example"), []byte(envContent), 0644)
 
+	// 7. Berkas docker-compose.yml
 	dockerComposeContent := fmt.Sprintf(`services:
   app:
-    image: golang:1.25-alpine
+    image: ilhamhattamanggala/larapak:latest
     container_name: %s-app
     restart: unless-stopped
     ports:
@@ -788,7 +712,7 @@ DB_DATABASE=storage/database.sqlite
     volumes:
       - .:/app
     working_dir: /app
-    command: go run main.go
+    command: ["larapak", "serve"]
     environment:
       - APP_ENV=local
       - APP_PORT=8080
@@ -796,6 +720,7 @@ DB_DATABASE=storage/database.sqlite
 `, name, lang)
 	_ = os.WriteFile(filepath.Join(name, "docker-compose.yml"), []byte(dockerComposeContent), 0644)
 
+	// 8. Berkas README.md
 	readmeContent := fmt.Sprintf(`# %s
 
 %s
@@ -803,20 +728,17 @@ DB_DATABASE=storage/database.sqlite
 ## %s
 `+"```bash"+`
 cd %s
-go run main.go
+larapak serve
 `+"```"+`
 
-Aplikasi: http://localhost:8080
-Route & API Studio: http://localhost:8080/_studio
+Buka browser:
+  Aplikasi: http://localhost:8080
+  Route & API Studio: http://localhost:8080/_studio
 `, name, readmeDesc, stepText, name)
 	_ = os.WriteFile(filepath.Join(name, "README.md"), []byte(readmeContent), 0644)
 
-	tidyCmd := exec.Command("go", "mod", "tidy")
-	tidyCmd.Dir = name
-	_ = tidyCmd.Run()
-
 	fmt.Printf(`
-✓ Proyek '%s' sukses digawe sing resik laka sampah engine! [Basa: %s]
+✓ Proyek '%s' sukses digawe sing resik 100%% NgapakIn (.ngpk)! [Basa: %s]
   Struktur Folder:
     - Controllers : %s
     - Models      : %s
@@ -825,7 +747,7 @@ Route & API Studio: http://localhost:8080/_studio
 
 %s
   cd %s
-  go run main.go
+  larapak serve
 
 Buka browser:
   Aplikasi     : http://localhost:8080
@@ -839,147 +761,115 @@ func createController(name string) {
 	}
 	p := paths.GetPaths(".")
 	dir := p.Controllers
-	pkgName := paths.PackageName(dir)
 	_ = os.MkdirAll(dir, 0755)
 
-	content := fmt.Sprintf(`package %s
+	content := fmt.Sprintf(`# Controller %s nggo LarapakGo
 
-import (
-	"net/http"
-	"github.com/IlhamHattaManggala/larapak-go/pkg/larapak"
-)
+gawe index(req, res)
+    balekna res.html("<h1>Aksi index nggo %s</h1>")
+rampung
+`, name, name)
 
-type %s struct{}
-
-func (ctl *%s) Index(c *larapak.Context) error {
-	return c.JSON(http.StatusOK, map[string]string{
-		"message": "Halo Sedulur! Selamat teka neng %s",
-	})
-}
-`, pkgName, name, name, name)
-
-	filePath := filepath.Join(dir, name+".go")
+	filePath := filepath.Join(dir, name+".ngpk")
 	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
 		fmt.Printf("Gagal nggawe controller: %v\n", err)
 		return
 	}
-	fmt.Printf("✓ Controller sukses digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
+	fmt.Printf("✓ Controller sukses digawe: %s\n", filepath.ToSlash(filePath))
 }
 
 func createModel(name string) {
 	p := paths.GetPaths(".")
 	dir := p.Models
-	pkgName := paths.PackageName(dir)
 	_ = os.MkdirAll(dir, 0755)
 
-	content := fmt.Sprintf(`package %s
+	tableName := strings.ToLower(name) + "s"
+	content := fmt.Sprintf(`# Model %s nggo LarapakGo
 
-import "time"
+kelas %s extends Model
+    tabel = "%s"
+    bisa_diisi = ["id", "jeneng", "email"]
+rampung
+`, name, name, tableName)
 
-type %s struct {
-	ID        int64     `+"`json:\"id\"`"+`
-	CreatedAt time.Time `+"`json:\"created_at\"`"+`
-	UpdatedAt time.Time `+"`json:\"updated_at\"`"+`
-}
-
-func (m *%s) TableName() string {
-	return "%ss"
-}
-`, pkgName, name, name, strings.ToLower(name))
-
-	filePath := filepath.Join(dir, name+".go")
+	filePath := filepath.Join(dir, name+".ngpk")
 	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
 		fmt.Printf("Gagal nggawe model: %v\n", err)
 		return
 	}
-	fmt.Printf("✓ Model sukses digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
+	fmt.Printf("✓ Model sukses digawe: %s\n", filepath.ToSlash(filePath))
 }
 
 func createMiddleware(name string) {
+	if !strings.HasSuffix(name, "Middleware") && !strings.HasSuffix(name, "middleware") {
+		name += "Middleware"
+	}
 	p := paths.GetPaths(".")
 	dir := p.Middleware
-	pkgName := paths.PackageName(dir)
 	_ = os.MkdirAll(dir, 0755)
 
-	content := fmt.Sprintf(`package %s
+	content := fmt.Sprintf(`# Middleware %s nggo LarapakGo
 
-import (
-	"github.com/IlhamHattaManggala/larapak-go/pkg/larapak"
-)
+gawe tangani(req, res, sateruse)
+    # Lakukan pengecekan / filter neng kene
+    balekna sateruse(req, res)
+rampung
+`, name)
 
-func %s() larapak.MiddlewareFunc {
-	return func(next larapak.HandlerFunc) larapak.HandlerFunc {
-		return func(c *larapak.Context) error {
-			err := next(c)
-			return err
-		}
-	}
-}
-`, pkgName, name)
-
-	filePath := filepath.Join(dir, name+".go")
+	filePath := filepath.Join(dir, name+".ngpk")
 	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
 		fmt.Printf("Gagal nggawe middleware: %v\n", err)
 		return
 	}
-	fmt.Printf("✓ Middleware sukses digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
+	fmt.Printf("✓ Middleware sukses digawe: %s\n", filepath.ToSlash(filePath))
 }
 
 func createJob(name string) {
+	if !strings.HasSuffix(name, "Job") && !strings.HasSuffix(name, "job") {
+		name += "Job"
+	}
 	p := paths.GetPaths(".")
 	dir := p.Jobs
-	pkgName := paths.PackageName(dir)
 	_ = os.MkdirAll(dir, 0755)
 
-	content := fmt.Sprintf(`package %s
+	content := fmt.Sprintf(`# Job %s nggo LarapakGo
 
-import "log"
+kelas %s
+    gawe tangani(data)
+        tulis("Lagi mroses job: " + data)
+    rampung
+rampung
+`, name, name)
 
-type %s struct {
-	Payload map[string]any
-}
-
-func (j *%s) Handle() error {
-	log.Printf("[Job %s] Lagi diproses nganggo payload: %%v", j.Payload)
-	return nil
-}
-`, pkgName, name, name, name)
-
-	filePath := filepath.Join(dir, name+".go")
+	filePath := filepath.Join(dir, name+".ngpk")
 	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
 		fmt.Printf("Gagal nggawe job: %v\n", err)
 		return
 	}
-	fmt.Printf("✓ Job antrean sukses digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
+	fmt.Printf("✓ Job antrean sukses digawe: %s\n", filepath.ToSlash(filePath))
 }
 
 func createSeeder(name string) {
+	if !strings.HasSuffix(name, "Seeder") && !strings.HasSuffix(name, "seeder") {
+		name += "Seeder"
+	}
 	p := paths.GetPaths(".")
 	dir := p.Seeders
-	pkgName := paths.PackageName(dir)
 	_ = os.MkdirAll(dir, 0755)
 
-	content := fmt.Sprintf(`package %s
+	content := fmt.Sprintf(`# Seeder %s nggo LarapakGo
 
-import (
-	"database/sql"
-	"log"
-)
+gawe tandang(db)
+    tulis("Lagi nandur bibit seeder: %s")
+rampung
+`, name, name)
 
-type %s struct{}
-
-func (s *%s) Run(db *sql.DB) error {
-	log.Println("[Seeder %s] Ngisi bibit database...")
-	return nil
-}
-`, pkgName, name, name, name)
-
-	filePath := filepath.Join(dir, name+".go")
+	filePath := filepath.Join(dir, name+".ngpk")
 	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
 		fmt.Printf("Gagal nggawe seeder: %v\n", err)
 		return
 	}
-	fmt.Printf("✓ Database Seeder sukses digawe: %s (package %s)\n", filepath.ToSlash(filePath), pkgName)
+	fmt.Printf("✓ Database Seeder sukses digawe: %s\n", filepath.ToSlash(filePath))
 }
 
 func createMigration(name string) {
