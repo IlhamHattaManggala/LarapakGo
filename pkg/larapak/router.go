@@ -41,6 +41,13 @@ func (r *Router) Use(m ...MiddlewareFunc) {
 	r.middlewares = append(r.middlewares, m...)
 }
 
+// AddMiddlewareToLastRoute appends a middleware to the most recently registered route.
+func (r *Router) AddMiddlewareToLastRoute(m MiddlewareFunc) {
+	if len(r.routes) > 0 {
+		r.routes[len(r.routes)-1].handlers = append(r.routes[len(r.routes)-1].handlers, m)
+	}
+}
+
 // SetNotFoundHandler overrides the default 404 handler.
 func (r *Router) SetNotFoundHandler(h HandlerFunc) {
 	if h != nil {

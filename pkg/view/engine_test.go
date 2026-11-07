@@ -178,3 +178,41 @@ func TestEngineErrorDirective(t *testing.T) {
 		t.Fatalf("expected no nama error rendered, but got:\n%s", out)
 	}
 }
+
+func TestEngineAssetAndFallbackInterpolation(t *testing.T) {
+	engine := New("")
+	tmpl := `<div class="profile">
+    <img src="{{ asset('avatars/user1.png') }}" />
+    <link rel="stylesheet" href="{{ aset('css/style.css') }}" />
+    <input type="text" name="jeneng" value="{{ old.jeneng || item.jeneng }}" />
+    <input type="text" name="katerangan" value="{{ old.katerangan || item.katerangan }}" />
+</div>`
+
+	data := map[string]any{
+		"old": map[string]any{
+			"jeneng": "Nilai Input Lawas",
+		},
+		"item": map[string]any{
+			"jeneng":     "Nilai Asli Database",
+			"katerangan": "Deskripsi Asli",
+		},
+	}
+
+	out, err := engine.RenderString(tmpl, data)
+	if err != nil {
+		t.Fatalf("failed to render: %v", err)
+	}
+
+	if !strings.Contains(out, `src="/storage/avatars/user1.png"`) {
+		t.Fatalf("expected /storage/avatars/user1.png in output, got:\n%s", out)
+	}
+	if !strings.Contains(out, `href="/css/style.css"`) {
+		t.Fatalf("expected /css/style.css in output, got:\n%s", out)
+	}
+	if !strings.Contains(out, `value="Nilai Input Lawas"`) {
+		t.Fatalf("expected old.jeneng to take precedence, got:\n%s", out)
+	}
+	if !strings.Contains(out, `value="Deskripsi Asli"`) {
+		t.Fatalf("expected item.katerangan fallback to be used, got:\n%s", out)
+	}
+}

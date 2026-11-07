@@ -74,6 +74,27 @@ Versi 1.0.0 menandai peluncuran perdana arsitektur web framework Larapak yang di
   - Perintah satu langkah `larapak make:resource <Nama>` atau `larapak gawe:sumber <Nama>`.
   - Otomatis men-generate Model (`.ngpk`), Migrasi tabel (`.sql`), CRUD Controller (`.ngpk` mencakup index, create, store, show, edit, update, delete), dan Template Views lengkap (`index.nview`, `create.nview`, `edit.nview`).
 
+- **Scaffolding Otentikasi Lengkap (`make:auth` / `gawe:otentikasi`)**:
+  - Perintah satu langkah `larapak make:auth` atau `larapak gawe:otentikasi`.
+  - Otomatis men-generate Model `User.ngpk`, Migrasi `users`, Middleware `AuthMiddleware.ngpk`, Controller `AuthController.ngpk` (Login, Register, Logout, Dashboard), dan Template Views lengkap (`login.nview`, `register.nview`, `dashboard.nview`).
+
+- **Rate Limiting & Anti-Brute Force (`throttle` / `wates`)**:
+  - Proteksi rute dari serangan spam dan brute force dengan sliding window token bucket per IP.
+  - Dukungan perataan rute `rute.wates(max, detik)` atau chaining per rute `rute.post(...).wates(max, detik)`.
+  - Mengembalikan respons HTTP 429 Too Many Requests dan header `Retry-After`.
+
+- **Database Inspector Visual di Route & API Studio (`/_studio`)**:
+  - Tab navigasi inspektur database untuk meninjau daftar tabel, struktur kolom, dan isi rekaman baris data langsung dari browser pada lingkungan pengembangan lokal dengan 100% SVG icons.
+
+- **Mailer Native SMTP Go (`pkg/mail`)**:
+  - Pengiriman email transaksional langsung dari skrip `.ngpk` via `email.kirim(...)` / `mail.send(...)` menggunakan paket standar `net/smtp`.
+  - Integrasi template email dengan `sawangan` dan fallback pencatatan log otomatis di mode pengembangan lokal.
+
+- **Disk Storage & Asset Helper (`pkg/storage`)**:
+  - Penyimpanan berkas upload otomatis dengan nama acak unik: `foto.simpen_neng("folder")` / `foto.save_to("folder")`.
+  - Operasi berkas storage: `storage.simpen`, `storage.jupuk`, `storage.ana`, `storage.busak`, `storage.dalan`.
+  - Helper template `{{ asset("path") }}` / `{{ aset("path") }}` dan evaluasi fallback interpolasi `{{ old.field || item.field }}`.
+
 - **Dual-Language CLI & Multi-Language Directory Scaffolding**:
   - Mendukung 22 pasangan perintah dalam bahasa Inggris dan dialek Ngapak Tegalan (`anyar`, `ladeni`, `dalan:daptar`, `gawe:pangatur`, `munggah`, `mudhun`, `resik:cache`, dll).
   - Dukungan pembuatan struktur direktori multi-bahasa (`--bahasa=ngapak|indonesia|english`).

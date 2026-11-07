@@ -233,6 +233,41 @@ func (e *Engine) RenderString(content string, data map[string]any) (string, erro
 		return match
 	})
 
+	// Handle {{ asset("path") }} or {{ aset("path") }}
+	assetPattern := regexp.MustCompile(`\{\{\s*(?:asset|aset)\s*\(\s*["']([^"']+)["']\s*\)\s*\}\}`)
+	output = assetPattern.ReplaceAllStringFunc(output, func(match string) string {
+		sub := assetPattern.FindStringSubmatch(match)
+		if len(sub) > 1 {
+			p := sub[1]
+			if strings.HasPrefix(p, "http://") || strings.HasPrefix(p, "https://") || strings.HasPrefix(p, "/") {
+				return p
+			}
+			if strings.HasPrefix(p, "css/") || strings.HasPrefix(p, "js/") || strings.HasPrefix(p, "images/") || strings.HasPrefix(p, "favicon") {
+				return "/" + p
+			}
+			return "/storage/" + p
+		}
+		return match
+	})
+
+	// Handle {{ a || b }} fallback interpolation
+	orPattern := regexp.MustCompile(`\{\{\s*([a-zA-Z0-9_.]+)\s*\|\|\s*([a-zA-Z0-9_.]+)\s*\}\}`)
+	output = orPattern.ReplaceAllStringFunc(output, func(match string) string {
+		sub := orPattern.FindStringSubmatch(match)
+		if len(sub) > 2 {
+			val1 := resolveDataValue(data, sub[1])
+			if val1 != nil && fmt.Sprintf("%v", val1) != "" {
+				return html.EscapeString(fmt.Sprintf("%v", val1))
+			}
+			val2 := resolveDataValue(data, sub[2])
+			if val2 != nil && fmt.Sprintf("%v", val2) != "" {
+				return html.EscapeString(fmt.Sprintf("%v", val2))
+			}
+			return ""
+		}
+		return match
+	})
+
 	// Replace raw unescaped interpolations: {!! variable !!}
 	rawPattern := regexp.MustCompile(`\{!!\s*([a-zA-Z0-9_.]+)\s*!!\}`)
 	output = rawPattern.ReplaceAllStringFunc(output, func(match string) string {

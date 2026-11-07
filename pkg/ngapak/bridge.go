@@ -13,9 +13,11 @@ import (
 
 	"github.com/IlhamHattaManggala/larapak-go/pkg/database"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/larapak"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/mail"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/paths"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/rikatlive"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/security"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/storage"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/studio"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/validation"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/view"
@@ -95,6 +97,38 @@ func (eng *Engine) BindRoutesWithStudio(app *larapak.App, st *studio.Studio) {
 		},
 		"patch": func(args []any) (any, error) {
 			return eng.registerRoute(app, st, "PATCH", args)
+		},
+		"wates": func(args []any) (any, error) {
+			maxReq := 60
+			windowSec := 60
+			if len(args) > 0 {
+				if m, ok := toInt(args[0]); ok {
+					maxReq = m
+				}
+			}
+			if len(args) > 1 {
+				if w, ok := toInt(args[1]); ok {
+					windowSec = w
+				}
+			}
+			app.Use(larapak.Throttle(maxReq, time.Duration(windowSec)*time.Second))
+			return nil, nil
+		},
+		"throttle": func(args []any) (any, error) {
+			maxReq := 60
+			windowSec := 60
+			if len(args) > 0 {
+				if m, ok := toInt(args[0]); ok {
+					maxReq = m
+				}
+			}
+			if len(args) > 1 {
+				if w, ok := toInt(args[1]); ok {
+					windowSec = w
+				}
+			}
+			app.Use(larapak.Throttle(maxReq, time.Duration(windowSec)*time.Second))
+			return nil, nil
 		},
 	}
 
@@ -337,6 +371,188 @@ func (eng *Engine) BindRoutesWithStudio(app *larapak.App, st *studio.Studio) {
 	}
 	eng.Evaluator.Globals.Set("validasi", validateObj)
 	eng.Evaluator.Globals.Set("validate", validateObj)
+
+	// Bind 'email' and 'mail' global objects for sending emails
+	mailObj := map[string]any{
+		"kirim": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("email.kirim mbutuhna data panampa")
+			}
+			var m mail.Message
+			if dMap, ok := args[0].(map[string]any); ok {
+				if toVal, exists := dMap["marang"]; exists {
+					m.To = parseRecipients(toVal)
+				} else if toVal, exists := dMap["to"]; exists {
+					m.To = parseRecipients(toVal)
+				}
+				if sub, exists := dMap["subyek"]; exists {
+					m.Subject = fmt.Sprintf("%v", sub)
+				} else if sub, exists := dMap["subject"]; exists {
+					m.Subject = fmt.Sprintf("%v", sub)
+				}
+				if body, exists := dMap["isi"]; exists {
+					m.Body = fmt.Sprintf("%v", body)
+				} else if body, exists := dMap["body"]; exists {
+					m.Body = fmt.Sprintf("%v", body)
+				}
+				if vName, exists := dMap["sawangan"]; exists {
+					var vData map[string]any
+					if vd, ok := dMap["data"].(map[string]any); ok {
+						vData = vd
+					}
+					rendered, err := eng.ViewEngine.RenderTemplate(fmt.Sprintf("%v", vName), vData)
+					if err == nil {
+						m.Body = rendered
+						m.HTML = true
+					}
+				} else if vName, exists := dMap["view"]; exists {
+					var vData map[string]any
+					if vd, ok := dMap["data"].(map[string]any); ok {
+						vData = vd
+					}
+					rendered, err := eng.ViewEngine.RenderTemplate(fmt.Sprintf("%v", vName), vData)
+					if err == nil {
+						m.Body = rendered
+						m.HTML = true
+					}
+				}
+				if from, exists := dMap["saka"]; exists {
+					m.From = fmt.Sprintf("%v", from)
+				} else if from, exists := dMap["from"]; exists {
+					m.From = fmt.Sprintf("%v", from)
+				}
+			}
+			err := mail.Send(m)
+			if err != nil {
+				return map[string]any{"ok": false, "error": err.Error()}, err
+			}
+			return map[string]any{"ok": true, "status": "sent"}, nil
+		},
+		"send": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("mail.send requires recipient data")
+			}
+			var m mail.Message
+			if dMap, ok := args[0].(map[string]any); ok {
+				if toVal, exists := dMap["to"]; exists {
+					m.To = parseRecipients(toVal)
+				} else if toVal, exists := dMap["marang"]; exists {
+					m.To = parseRecipients(toVal)
+				}
+				if sub, exists := dMap["subject"]; exists {
+					m.Subject = fmt.Sprintf("%v", sub)
+				} else if sub, exists := dMap["subyek"]; exists {
+					m.Subject = fmt.Sprintf("%v", sub)
+				}
+				if body, exists := dMap["body"]; exists {
+					m.Body = fmt.Sprintf("%v", body)
+				} else if body, exists := dMap["isi"]; exists {
+					m.Body = fmt.Sprintf("%v", body)
+				}
+				if vName, exists := dMap["view"]; exists {
+					var vData map[string]any
+					if vd, ok := dMap["data"].(map[string]any); ok {
+						vData = vd
+					}
+					rendered, err := eng.ViewEngine.RenderTemplate(fmt.Sprintf("%v", vName), vData)
+					if err == nil {
+						m.Body = rendered
+						m.HTML = true
+					}
+				}
+			}
+			err := mail.Send(m)
+			if err != nil {
+				return map[string]any{"ok": false, "error": err.Error()}, err
+			}
+			return map[string]any{"ok": true, "status": "sent"}, nil
+		},
+	}
+	eng.Evaluator.Globals.Set("email", mailObj)
+	eng.Evaluator.Globals.Set("mail", mailObj)
+
+	// Bind 'storage' and 'lumbung' global objects
+	disk := storage.Default()
+	storageObj := map[string]any{
+		"simpen": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("storage.simpen mbutuhna path karo isi")
+			}
+			path := fmt.Sprintf("%v", args[0])
+			content := fmt.Sprintf("%v", args[1])
+			err := disk.Put(path, []byte(content))
+			return err == nil, err
+		},
+		"put": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("storage.put requires path and content")
+			}
+			path := fmt.Sprintf("%v", args[0])
+			content := fmt.Sprintf("%v", args[1])
+			err := disk.Put(path, []byte(content))
+			return err == nil, err
+		},
+		"jupuk": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return "", fmt.Errorf("storage.jupuk mbutuhna path")
+			}
+			b, err := disk.Get(fmt.Sprintf("%v", args[0]))
+			if err != nil {
+				return "", err
+			}
+			return string(b), nil
+		},
+		"get": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return "", fmt.Errorf("storage.get requires path")
+			}
+			b, err := disk.Get(fmt.Sprintf("%v", args[0]))
+			if err != nil {
+				return "", err
+			}
+			return string(b), nil
+		},
+		"ana": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return false, nil
+			}
+			return disk.Exists(fmt.Sprintf("%v", args[0])), nil
+		},
+		"exists": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return false, nil
+			}
+			return disk.Exists(fmt.Sprintf("%v", args[0])), nil
+		},
+		"busak": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return false, nil
+			}
+			err := disk.Delete(fmt.Sprintf("%v", args[0]))
+			return err == nil, err
+		},
+		"delete": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return false, nil
+			}
+			err := disk.Delete(fmt.Sprintf("%v", args[0]))
+			return err == nil, err
+		},
+		"dalan": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return "", nil
+			}
+			return disk.URL(fmt.Sprintf("%v", args[0])), nil
+		},
+		"url": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return "", nil
+			}
+			return disk.URL(fmt.Sprintf("%v", args[0])), nil
+		},
+	}
+	eng.Evaluator.Globals.Set("storage", storageObj)
+	eng.Evaluator.Globals.Set("lumbung", storageObj)
 }
 
 func createValidatorBridge(data map[string]any, rules map[string]string) map[string]any {
@@ -639,7 +855,59 @@ func (eng *Engine) registerRoute(app *larapak.App, st *studio.Studio, method str
 		app.PATCH(routePath, handler)
 	}
 
-	return nil, nil
+	routeBridge := map[string]any{
+		"wates": func(bArgs []any) (any, error) {
+			maxReq := 60
+			windowSec := 60
+			if len(bArgs) > 0 {
+				if m, ok := toInt(bArgs[0]); ok {
+					maxReq = m
+				}
+			}
+			if len(bArgs) > 1 {
+				if w, ok := toInt(bArgs[1]); ok {
+					windowSec = w
+				}
+			}
+			app.AddMiddlewareToLastRoute(larapak.Throttle(maxReq, time.Duration(windowSec)*time.Second))
+			return nil, nil
+		},
+		"throttle": func(bArgs []any) (any, error) {
+			maxReq := 60
+			windowSec := 60
+			if len(bArgs) > 0 {
+				if m, ok := toInt(bArgs[0]); ok {
+					maxReq = m
+				}
+			}
+			if len(bArgs) > 1 {
+				if w, ok := toInt(bArgs[1]); ok {
+					windowSec = w
+				}
+			}
+			app.AddMiddlewareToLastRoute(larapak.Throttle(maxReq, time.Duration(windowSec)*time.Second))
+			return nil, nil
+		},
+	}
+
+	return routeBridge, nil
+}
+
+func parseRecipients(val any) []string {
+	if s, ok := val.(string); ok {
+		return []string{s}
+	}
+	if list, ok := val.([]any); ok {
+		var res []string
+		for _, item := range list {
+			res = append(res, fmt.Sprintf("%v", item))
+		}
+		return res
+	}
+	if list, ok := val.([]string); ok {
+		return list
+	}
+	return nil
 }
 
 func (eng *Engine) createContextBridge(c *larapak.Context) (map[string]any, map[string]any) {
@@ -851,6 +1119,38 @@ func (eng *Engine) createContextBridge(c *larapak.Context) (map[string]any, map[
 					dst := fmt.Sprintf("%v", sArgs[0])
 					err := c.SaveUploadedFile(fh, dst)
 					return err == nil, err
+				},
+				"simpen_neng": func(sArgs []any) (any, error) {
+					subDir := ""
+					if len(sArgs) > 0 {
+						subDir = fmt.Sprintf("%v", sArgs[0])
+					}
+					src, err := fh.Open()
+					if err != nil {
+						return "", err
+					}
+					defer src.Close()
+					content, err := io.ReadAll(src)
+					if err != nil {
+						return "", err
+					}
+					return storage.Default().SaveUploaded(content, fh.Filename, subDir)
+				},
+				"save_to": func(sArgs []any) (any, error) {
+					subDir := ""
+					if len(sArgs) > 0 {
+						subDir = fmt.Sprintf("%v", sArgs[0])
+					}
+					src, err := fh.Open()
+					if err != nil {
+						return "", err
+					}
+					defer src.Close()
+					content, err := io.ReadAll(src)
+					if err != nil {
+						return "", err
+					}
+					return storage.Default().SaveUploaded(content, fh.Filename, subDir)
 				},
 			}, nil
 		},

@@ -452,5 +452,75 @@ rampung)
 	}
 }
 
+func TestMailAndStorageInNgapak(t *testing.T) {
+	tmpDir := t.TempDir()
+	app := larapak.New()
+	vEngine := view.New(tmpDir)
+	ngpkEngine := NewEngine(tmpDir, vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	script := `
+mailRes = email.kirim({
+    "marang": "user@example.com",
+    "subyek": "Sugeng Rawuh",
+    "isi": "Isi layang email Larapak"
+})
+
+storage.simpen("cathetan.txt", "Teks Rahasia")
+adaFile = storage.ana("cathetan.txt")
+isiFile = storage.jupuk("cathetan.txt")
+urlFile = storage.dalan("cathetan.txt")
+`
+	_, err := ngpkEngine.RunSource(script, "mail_storage_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource mail & storage test failed: %v", err)
+	}
+
+	if ada, _ := ngpkEngine.Evaluator.Globals.Get("adaFile"); ada != true {
+		t.Errorf("expected adaFile true, got %v", ada)
+	}
+	if isi, _ := ngpkEngine.Evaluator.Globals.Get("isiFile"); isi != "Teks Rahasia" {
+		t.Errorf("expected isiFile 'Teks Rahasia', got %v", isi)
+	}
+	if url, _ := ngpkEngine.Evaluator.Globals.Get("urlFile"); url != "/storage/cathetan.txt" {
+		t.Errorf("expected urlFile '/storage/cathetan.txt', got %v", url)
+	}
+}
+
+func TestRouteThrottleInNgapak(t *testing.T) {
+	tmpDir := t.TempDir()
+	app := larapak.New()
+	vEngine := view.New(tmpDir)
+	ngpkEngine := NewEngine(tmpDir, vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	script := `
+rute.get("/api/terbatas", gawe(req, res)
+    balekna res.json({"pesan": "aman"})
+rampung).wates(1, 10)
+`
+	_, err := ngpkEngine.RunSource(script, "throttle_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource throttle test failed: %v", err)
+	}
+
+	// 1st request -> 200 OK
+	req1 := httptest.NewRequest("GET", "/api/terbatas", nil)
+	w1 := httptest.NewRecorder()
+	app.ServeHTTP(w1, req1)
+	if w1.Code != http.StatusOK {
+		t.Fatalf("expected 200 on 1st request, got %d", w1.Code)
+	}
+
+	// 2nd request -> 429 Too Many Requests
+	req2 := httptest.NewRequest("GET", "/api/terbatas", nil)
+	w2 := httptest.NewRecorder()
+	app.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected 429 on 2nd request, got %d", w2.Code)
+	}
+}
+
+
 
 

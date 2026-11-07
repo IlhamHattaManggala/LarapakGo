@@ -133,8 +133,9 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
 - **Fleksibel Caching (`pkg/cache`)**: Dukungan driver terpadu `CACHE_DRIVER=memory|redis`. Fitur `Get()`, `Set(key, val, ttl)`, `Delete()`, dan `Flush()`.
 - **Distributed Job Queues (`pkg/queue`)**: Pemrosesan antrean latar belakang `QUEUE_DRIVER=memory|redis` dengan metode non-busy-waiting `BRPOP` yang hemat CPU untuk arsitektur multi-server/multi-worker.
 
-### 8. Route & API Studio Bawaan (`pkg/studio`)
-- Antarmuka GUI interaktif Route & API Studio di `/_studio` dengan palet tema modern gelap dan **100% SVG icons** (tanpa emoticon).
+### 8. Route & API Studio Bawaan & Database Inspector (`pkg/studio`)
+- **Route & API Studio Interaktif**: Halaman pengujian API interaktif di `/_studio` dengan palet tema modern gelap dan **100% SVG icons** (tanpa emoticon).
+- **Database Inspector Visual**: Tab inspektur database bawaan untuk meninjau daftar tabel, struktur kolom, dan isi baris rekaman database (SQLite/MySQL/Postgres) langsung dari peramban web pada mode pengembangan lokal.
 - Live testing request HTTP & pratinjau respons.
 - Ekspor otomatis ke spesifikasi standar **OpenAPI 3.0.3** JSON di `/_studio/openapi.json`.
 
@@ -152,11 +153,12 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
   - **English**: `larapak new my_app --bahasa=english`
     - Struktur: `app/Controllers`, `app/Models`, `app/Middleware`, `app/Jobs`, `database/migrations`, `database/seeders`, `resources/views/`, `routes/`, `public/`.
     - Otomatis menghasilkan `routes/web.ngpk` dan `resources/views/index.nview`.
-- Dual-support 23 perintah bahasa Inggris & dialek Ngapak:
+- Dual-support 24 perintah bahasa Inggris & dialek Ngapak:
   - `larapak new <nama>` / `larapak anyar <nama> [--bahasa=...]`
   - `larapak serve [port]` / `larapak ladeni [port]` / `urubna` / `mlaku` (dengan Auto Hot-Reload & Browser Refresh aktif otomatis)
   - `larapak route:list` / `larapak dalan:daptar` (Otomatis membaca rute aktif dari `web.ngpk`)
   - `larapak run <skrip.ngpk>` / `larapak mlakukna <skrip.ngpk>` / `larapak eksekusi <skrip.ngpk>`
+  - `larapak make:auth` / `gawe:otentikasi` / `gawe:auth` (Scaffolding lengkap Sistem Login, Register, Auth Middleware & Views)
   - `larapak make:resource <Nama>` / `gawe:sumber` / `gawe:resource` (Scaffolding lengkap Model, Migrasi, CRUD Controller & Views)
   - `larapak make:controller <Nama>` / `gawe:pangatur` / `gawe:controller`
   - `larapak make:model <Nama>` / `gawe:wujud` / `gawe:model`
@@ -205,6 +207,24 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
         tulis("Status: " + res.status + " Body: " + res.body)
     rampung
     ```
+  - **Rate Limiting & Anti-Brute Force (`throttle` / `wates`)**:
+    ```python
+    # Batasi 5 request per 60 detik (HTTP 429 Too Many Requests jika berlebih)
+    rute.post("/masuk", "AuthController@login").wates(5, 60)
+    ```
+  - **Mailer Native SMTP Go (`email.kirim` / `mail.send`)**:
+    ```python
+    email.kirim({
+        "marang": "pelanggan@example.com",
+        "subyek": "Sugeng Rawuh",
+        "sawangan": "emails/welcome",
+        "data": {"jeneng": "Budi"}
+    })
+    ```
+  - **Disk Storage & Upload Helper (`lumbung` / `storage`)**:
+    - Simpan file upload otomatis dengan nama unik: `foto = req.berkas("avatar"); path = foto.simpen_neng("avatars")`
+    - Operasi berkas: `storage.simpen(path, isi)`, `storage.jupuk(path)`, `storage.ana(path)`, `storage.busak(path)`, `storage.dalan(path)`.
+    - Helper aset di `.nview`: `<img src="{{ asset('avatars/avatar.png') }}" />`.
   - **Helper Variabel Lingkungan (`env` / `lingkungan`)**: `env("APP_NAME", "LarapakGo")` atau `lingkungan("DB_DATABASE", "storage/db.sqlite")` untuk membaca berkas `.env`.
   - Otomatis tersinkronisasi ke antarmuka Route & API Studio di `/_studio`.
 

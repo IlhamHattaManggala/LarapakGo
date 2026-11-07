@@ -185,6 +185,9 @@ func main() {
 		}
 		createResource(args[0])
 
+	case "make:auth", "gawe:otentikasi", "gawe:auth":
+		createAuthScaffold()
+
 	// =========================================================================
 	// 4. DATABASE & MIGRASI
 	// =========================================================================
@@ -280,6 +283,7 @@ Perintah Dialek Ngapak (Asli):
   larapak anyar <NamaProyek> [--bahasa=ngapak|indonesia|english]
   larapak ladeni [port]                         (Urubna server lokal, Studio & Auto-Reload)
   larapak dalan:daptar                          (Daftar kabeh rute HTTP)
+  larapak gawe:otentikasi                       (Gawe lengkap sistem Login, Register, Auth Middleware & Views)
   larapak gawe:sumber <NamaSumber>              (Gawe lengkap Model, Migrasi, CRUD Controller & Views)
   larapak gawe:pangatur <NamaController>        (Gawe controller anyar)
   larapak gawe:wujud <NamaModel>                (Gawe model ORM anyar)
@@ -303,7 +307,7 @@ Perintah Dialek Ngapak (Asli):
   larapak tulung                                (Ndeleng panduan kiye)
 
 Perintah Standar (Laravel Artisan Style):
-  larapak new, serve, route:list, make:resource, make:controller, make:model, make:live, make:migration,
+  larapak new, serve, route:list, make:auth, make:resource, make:controller, make:model, make:live, make:migration,
   make:middleware, make:job, make:seeder, migrate, migrate:fresh, migrate:status,
   rollback, db:seed, queue:work, cache:clear, css:build, run, repl, test, help, version
 
@@ -687,8 +691,22 @@ func buildApp(port string, st *studio.Studio) (*larapak.App, error) {
 		st.Handler().ServeHTTP(c.Writer, c.Request)
 		return nil
 	})
-	app.GET("/_studio/openapi.json", func(c *larapak.Context) error {
+	app.GET("/_studio/*", func(c *larapak.Context) error {
 		st.Handler().ServeHTTP(c.Writer, c.Request)
+		return nil
+	})
+
+	// 4b. Public Storage Assets Handler
+	app.GET("/storage/*", func(c *larapak.Context) error {
+		relPath := c.Param("filepath")
+		fullPath := filepath.Join("storage", "app", relPath)
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			fullPath = filepath.Join("storage", relPath)
+		}
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			return c.String(http.StatusNotFound, "File storage ora ditemokna")
+		}
+		http.ServeFile(c.Writer, c.Request, fullPath)
 		return nil
 	})
 
@@ -1567,6 +1585,343 @@ Contohe rute sing bisa ditambahi neng routes/web.ngpk:
 		pluralLower, controllerName,
 		pluralLower, controllerName,
 		pluralLower, controllerName)
+}
+
+func createAuthScaffold() {
+	p := paths.GetPaths(".")
+	_ = os.MkdirAll(p.Models, 0755)
+	_ = os.MkdirAll(p.Migrations, 0755)
+	_ = os.MkdirAll(p.Middleware, 0755)
+	_ = os.MkdirAll(p.Controllers, 0755)
+	authViewDir := filepath.Join(p.Views, "auth")
+	_ = os.MkdirAll(authViewDir, 0755)
+
+	// 1. Model User.ngpk
+	modelPath := filepath.Join(p.Models, "User.ngpk")
+	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
+		modelContent := `# Model User nggo LarapakGo
+
+kelas User extends Model
+    tabel = "users"
+    bisa_diisi = ["id", "jeneng", "email", "password"]
+rampung
+`
+		_ = os.WriteFile(modelPath, []byte(modelContent), 0644)
+	}
+
+	// 2. Migrasi users
+	timestamp := time.Now().Format("20060102150405")
+	migrationFile := fmt.Sprintf("%s_create_users_table.sql", timestamp)
+	migrationPath := filepath.Join(p.Migrations, migrationFile)
+	migrationContent := fmt.Sprintf(`-- Migrasi tabel users nggo LarapakGo Otentikasi
+-- Digawe: %s
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    jeneng TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`, time.Now().Format(time.RFC1123))
+	_ = os.WriteFile(migrationPath, []byte(migrationContent), 0644)
+
+	// 3. Middleware AuthMiddleware.ngpk
+	mwPath := filepath.Join(p.Middleware, "AuthMiddleware.ngpk")
+	mwContent := `# Middleware AuthMiddleware nggo nyaring rute sing mbutuhna login
+
+gawe tangani(req, res, sateruse)
+    uid = req.sesi.jupuk("user_id")
+    nek uid == kosong utawa uid == "" ya
+        req.sesi.kilat("info", "Tulung mlebu log ndisit kanggo ngakses kaca kiye.")
+        balekna res.redirect("/masuk")
+    rampung
+    balekna sateruse(req, res)
+rampung
+`
+	_ = os.WriteFile(mwPath, []byte(mwContent), 0644)
+
+	// 4. Controller AuthController.ngpk
+	ctrlPath := filepath.Join(p.Controllers, "AuthController.ngpk")
+	ctrlContent := `# Controller Otentikasi nggo LarapakGo
+
+gawe showLogin(req, res)
+    uid = req.sesi.jupuk("user_id")
+    nek uid != kosong lan uid != "" ya
+        balekna res.redirect("/dasbor")
+    rampung
+    balekna res.view("auth/login", {
+        "title": "Mlebu Log Aplikasi"
+    })
+rampung
+
+gawe login(req, res)
+    v = req.validasi({
+        "email": "required|email",
+        "password": "required"
+    })
+    nek v.fails() ya
+        balekna res.karo_input().karo_kliru(v.errors()).balek("/masuk")
+    rampung
+
+    emailInput = req.input("email")
+    passInput = req.input("password")
+
+    user = db.tabel("users").neng("email", emailInput).siji()
+    nek user == kosong ya
+        balekna res.karo_input().karo_kliru({"email": "Email utawa sandi ora cocok!"}).balek("/masuk")
+    rampung
+
+    isCocok = sandi.cocok(passInput, user.password)
+    nek ora isCocok ya
+        balekna res.karo_input().karo_kliru({"email": "Email utawa sandi ora cocok!"}).balek("/masuk")
+    rampung
+
+    req.sesi.simpen("user_id", user.id)
+    req.sesi.simpen("user_name", user.jeneng)
+    req.sesi.simpen("user_email", user.email)
+    req.sesi.kilat("sukses", "Sugeng rawuh maning, " + user.jeneng + "!")
+
+    balekna res.redirect("/dasbor")
+rampung
+
+gawe showRegister(req, res)
+    uid = req.sesi.jupuk("user_id")
+    nek uid != kosong lan uid != "" ya
+        balekna res.redirect("/dasbor")
+    rampung
+    balekna res.view("auth/register", {
+        "title": "Daftar Akun Anyar"
+    })
+rampung
+
+gawe register(req, res)
+    v = req.validasi({
+        "jeneng": "required|min:3",
+        "email": "required|email",
+        "password": "required|min:6"
+    })
+    nek v.fails() ya
+        balekna res.karo_input().karo_kliru(v.errors()).balek("/daftar")
+    rampung
+
+    emailInput = req.input("email")
+    anaUser = db.tabel("users").neng("email", emailInput).siji()
+    nek anaUser != kosong ya
+        balekna res.karo_input().karo_kliru({"email": "Email kiye wis tau didaptarna!"}).balek("/daftar")
+    rampung
+
+    hashSandi = sandi.gawe(req.input("password"))
+    db.tabel("users").tambah({
+        "jeneng": req.input("jeneng"),
+        "email": emailInput,
+        "password": hashSandi
+    })
+
+    anyar = db.tabel("users").neng("email", emailInput).siji()
+    req.sesi.simpen("user_id", anyar.id)
+    req.sesi.simpen("user_name", anyar.jeneng)
+    req.sesi.simpen("user_email", anyar.email)
+    req.sesi.kilat("sukses", "Akun kasil digawe!")
+
+    balekna res.redirect("/dasbor")
+rampung
+
+gawe logout(req, res)
+    req.sesi.busak("user_id")
+    req.sesi.busak("user_name")
+    req.sesi.busak("user_email")
+    req.sesi.kilat("info", "Sampeyan wis metu saka sesi log.")
+    balekna res.redirect("/masuk")
+rampung
+
+gawe dashboard(req, res)
+    uid = req.sesi.jupuk("user_id")
+    nek uid == kosong utawa uid == "" ya
+        balekna res.redirect("/masuk")
+    rampung
+
+    balekna res.view("auth/dashboard", {
+        "title": "Dasbor Pengguna",
+        "user_id": uid,
+        "user_name": req.sesi.jupuk("user_name"),
+        "user_email": req.sesi.jupuk("user_email")
+    })
+rampung
+`
+	_ = os.WriteFile(ctrlPath, []byte(ctrlContent), 0644)
+
+	// 5. Views: login, register, dashboard
+	loginViewPath := filepath.Join(authViewDir, "login.nview")
+	loginViewContent := `@layout("layout")
+
+@section("content")
+<div class="card p-6 border rounded-lg shadow-sm bg-white max-w-md mx-auto my-8">
+    <div class="text-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">{{ title }}</h2>
+        <p class="text-sm text-gray-500 mt-1">Mlebu nggo ngakses akun sampeyan</p>
+    </div>
+
+    @flash("sukses")
+    <div class="bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm px-4 py-2 rounded mb-4">
+        {{ message }}
+    </div>
+    @endflash
+
+    @flash("info")
+    <div class="bg-blue-50 border border-blue-300 text-blue-800 text-sm px-4 py-2 rounded mb-4">
+        {{ message }}
+    </div>
+    @endflash
+
+    <form action="/masuk" method="POST">
+        <input type="hidden" name="_csrf" value="{{ _csrf }}" />
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Alamat Email</label>
+            <input type="email" name="email" value="{{ old.email }}" class="w-full border px-3 py-2 rounded focus:outline-none focus:border-blue-500" placeholder="nama@domain.com" required />
+            @error("email")
+                <p class="text-red-500 text-xs mt-1">{{ message }}</p>
+            @enderror
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tembung Sandi</label>
+            <input type="password" name="password" class="w-full border px-3 py-2 rounded focus:outline-none focus:border-blue-500" placeholder="••••••••" required />
+            @error("password")
+                <p class="text-red-500 text-xs mt-1">{{ message }}</p>
+            @enderror
+        </div>
+
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition duration-150">
+            Mlebu Log
+        </button>
+    </form>
+
+    <div class="text-center mt-6 text-sm text-gray-600">
+        Durung duwe akun? <a href="/daftar" class="text-blue-600 hover:underline font-medium">Daftar Anyar</a>
+    </div>
+</div>
+@endsection
+`
+	_ = os.WriteFile(loginViewPath, []byte(loginViewContent), 0644)
+
+	regViewPath := filepath.Join(authViewDir, "register.nview")
+	regViewContent := `@layout("layout")
+
+@section("content")
+<div class="card p-6 border rounded-lg shadow-sm bg-white max-w-md mx-auto my-8">
+    <div class="text-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">{{ title }}</h2>
+        <p class="text-sm text-gray-500 mt-1">Gawe akun anyar neng LarapakGo</p>
+    </div>
+
+    <form action="/daftar" method="POST">
+        <input type="hidden" name="_csrf" value="{{ _csrf }}" />
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Jeneng Lengkap</label>
+            <input type="text" name="jeneng" value="{{ old.jeneng }}" class="w-full border px-3 py-2 rounded focus:outline-none focus:border-blue-500" placeholder="Jeneng sampeyan..." required />
+            @error("jeneng")
+                <p class="text-red-500 text-xs mt-1">{{ message }}</p>
+            @enderror
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Alamat Email</label>
+            <input type="email" name="email" value="{{ old.email }}" class="w-full border px-3 py-2 rounded focus:outline-none focus:border-blue-500" placeholder="nama@domain.com" required />
+            @error("email")
+                <p class="text-red-500 text-xs mt-1">{{ message }}</p>
+            @enderror
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tembung Sandi</label>
+            <input type="password" name="password" class="w-full border px-3 py-2 rounded focus:outline-none focus:border-blue-500" placeholder="Minimal 6 karakter..." required />
+            @error("password")
+                <p class="text-red-500 text-xs mt-1">{{ message }}</p>
+            @enderror
+        </div>
+
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition duration-150">
+            Daftar Akun
+        </button>
+    </form>
+
+    <div class="text-center mt-6 text-sm text-gray-600">
+        Wis duwe akun? <a href="/masuk" class="text-blue-600 hover:underline font-medium">Mlebu Log</a>
+    </div>
+</div>
+@endsection
+`
+	_ = os.WriteFile(regViewPath, []byte(regViewContent), 0644)
+
+	dashViewPath := filepath.Join(authViewDir, "dashboard.nview")
+	dashViewContent := `@layout("layout")
+
+@section("content")
+<div class="card p-6 border rounded-lg shadow-sm bg-white max-w-2xl mx-auto my-8">
+    <div class="flex items-center justify-between border-b pb-4 mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">{{ title }}</h2>
+            <p class="text-sm text-gray-500 mt-1">Sugeng rawuh neng dasbor LarapakGo!</p>
+        </div>
+        <form action="/metu" method="POST">
+            <input type="hidden" name="_csrf" value="{{ _csrf }}" />
+            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded transition duration-150">
+                Metu Sesi
+            </button>
+        </form>
+    </div>
+
+    @flash("sukses")
+    <div class="bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm px-4 py-2 rounded mb-6">
+        {{ message }}
+    </div>
+    @endflash
+
+    <div class="bg-gray-50 p-4 rounded-lg border">
+        <h3 class="font-semibold text-gray-700 mb-3">Informasi Akun Sampeyan:</h3>
+        <dl class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+                <dt class="text-gray-500">ID Pengguna:</dt>
+                <dd class="font-mono font-medium">{{ user_id }}</dd>
+            </div>
+            <div>
+                <dt class="text-gray-500">Jeneng:</dt>
+                <dd class="font-medium">{{ user_name }}</dd>
+            </div>
+            <div>
+                <dt class="text-gray-500">Alamat Email:</dt>
+                <dd class="font-medium">{{ user_email }}</dd>
+            </div>
+            <div>
+                <dt class="text-gray-500">Status Sesi:</dt>
+                <dd><span class="inline-block bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded font-medium">Aktif</span></dd>
+            </div>
+        </dl>
+    </div>
+</div>
+@endsection
+`
+	_ = os.WriteFile(dashViewPath, []byte(dashViewContent), 0644)
+
+	fmt.Printf(`✓ Sistem Otentikasi sukses digawe (100%% NgapakIn & Zero .go)!
+  - Model      : %s
+  - Migrasi    : %s
+  - Middleware : %s
+  - Controller : %s
+  - Views      : %s/ (login.nview, register.nview, dashboard.nview)
+
+Contohe rute sing bisa ditambahi neng routes/web.ngpk:
+  rute.get("/masuk", "AuthController@showLogin")
+  rute.post("/masuk", "AuthController@login")
+  rute.get("/daftar", "AuthController@showRegister")
+  rute.post("/daftar", "AuthController@register")
+  rute.post("/metu", "AuthController@logout")
+  rute.get("/dasbor", "AuthController@dashboard")
+`, filepath.ToSlash(modelPath), filepath.ToSlash(migrationPath), filepath.ToSlash(mwPath), filepath.ToSlash(ctrlPath), filepath.ToSlash(authViewDir))
 }
 
 func runMigrations() {

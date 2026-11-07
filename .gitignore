@@ -18,7 +18,8 @@ bin/
 *.swp
 
 # Storage & Logs
-storage/
+/storage/
+pkg/*/storage/
 *.log
 
 

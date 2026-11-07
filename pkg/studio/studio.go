@@ -16,7 +16,7 @@ type RouteInfo struct {
 	Params []string `json:"params"`
 }
 
-// Studio provides the interactive Route & API Studio UI and OpenAPI 3.0 export.
+// Studio provides the interactive Route & API Studio UI, Database Inspector, and OpenAPI 3.0 export.
 type Studio struct {
 	AppName string
 	Version string
@@ -173,15 +173,19 @@ func (s *Studio) RenderHTML() string {
         .badge-ver { background: #1E202B; color: var(--text-secondary); border: 1px solid var(--border-highlight); }
         .badge-env { background: rgba(16,185,129,0.12); color: var(--color-emerald); border: 1px solid rgba(16,185,129,0.25); display: flex; align-items: center; gap: 5px; }
         .dot { width: 6px; height: 6px; border-radius: 50%%; background: var(--color-emerald); }
+        .nav-switch { display: flex; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 3px; gap: 4px; }
+        .nav-btn { background: none; border: none; color: var(--text-secondary); padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
+        .nav-btn:hover { color: var(--text-primary); }
+        .nav-btn.active { background: var(--bg-elevated); color: var(--color-amber); font-weight: 600; border: 1px solid var(--border-highlight); }
         .main-layout { display: flex; flex: 1; overflow: hidden; }
         .sidebar { width: 340px; border-right: 1px solid var(--border-subtle); background: var(--bg-surface); display: flex; flex-direction: column; }
         .search-box { padding: 12px; border-bottom: 1px solid var(--border-subtle); }
         .search-input { width: 100%%; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 8px 12px; color: var(--text-primary); font-size: 12px; outline: none; }
-        .route-list { flex: 1; overflow-y: auto; padding: 8px; }
-        .route-card { padding: 10px 12px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; margin-bottom: 4px; transition: all 0.15s; }
-        .route-card:hover { background: var(--bg-elevated); border-color: var(--border-subtle); }
-        .route-card.active { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.3); }
-        .route-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+        .route-list, .table-list { flex: 1; overflow-y: auto; padding: 8px; }
+        .route-card, .table-card { padding: 10px 12px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; margin-bottom: 4px; transition: all 0.15s; }
+        .route-card:hover, .table-card:hover { background: var(--bg-elevated); border-color: var(--border-subtle); }
+        .route-card.active, .table-card.active { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.3); }
+        .route-card-top, .table-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
         .method-badge { font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
         .m-GET { background: rgba(16,185,129,0.15); color: var(--color-emerald); }
         .m-POST { background: rgba(56,189,248,0.15); color: var(--color-sky); }
@@ -189,10 +193,10 @@ func (s *Studio) RenderHTML() string {
         .m-DELETE { background: rgba(239,68,68,0.15); color: var(--color-rose); }
         .route-path { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--text-primary); }
         .route-target { font-size: 11px; color: var(--text-muted); }
-        .content { flex: 1; display: flex; flex-direction: column; background: var(--bg-base); }
-        .url-bar { padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); display: flex; gap: 10px; align-items: center; background: var(--bg-surface); }
-        .url-input { flex: 1; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 14px; color: var(--text-primary); font-family: var(--font-mono); font-size: 13px; outline: none; }
-        .btn-send { background: var(--color-amber); color: #000; font-weight: 600; font-size: 13px; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .content { flex: 1; display: flex; flex-direction: column; background: var(--bg-base); overflow: hidden; }
+        .url-bar { padding: 14px 20px; border-bottom: 1px solid var(--border-subtle); display: flex; gap: 10px; align-items: center; background: var(--bg-surface); }
+        .url-input { flex: 1; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 9px 14px; color: var(--text-primary); font-family: var(--font-mono); font-size: 13px; outline: none; }
+        .btn-send { background: var(--color-amber); color: #000; font-weight: 600; font-size: 13px; border: none; padding: 9px 18px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
         .btn-send:hover { opacity: 0.9; }
         .workspace { flex: 1; display: flex; overflow: hidden; }
         .panel { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border-subtle); }
@@ -201,9 +205,12 @@ func (s *Studio) RenderHTML() string {
         .tab-btn.active { color: var(--text-primary); background: var(--bg-elevated); }
         .panel-body { flex: 1; padding: 20px; overflow-y: auto; }
         .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%%; color: var(--text-muted); text-align: center; gap: 12px; }
-        .viewport-switch { display: flex; gap: 4px; margin-left: auto; }
-        .vp-btn { background: var(--bg-base); border: 1px solid var(--border-subtle); color: var(--text-secondary); padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
-        .vp-btn.active { border-color: var(--color-amber); color: var(--text-primary); }
+        .data-table-wrap { flex: 1; overflow: auto; padding: 16px; }
+        table.db-table { width: 100%%; border-collapse: collapse; font-size: 12px; text-align: left; }
+        table.db-table th { background: var(--bg-surface); color: var(--text-secondary); padding: 10px 12px; border: 1px solid var(--border-subtle); font-family: var(--font-mono); font-weight: 600; position: sticky; top: 0; }
+        table.db-table td { padding: 8px 12px; border: 1px solid var(--border-subtle); color: var(--text-primary); font-family: var(--font-mono); }
+        table.db-table tr:hover td { background: var(--bg-surface); }
+        .db-header-bar { padding: 14px 20px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); }
     </style>
 </head>
 <body>
@@ -224,6 +231,18 @@ func (s *Studio) RenderHTML() string {
                 <span class="badge badge-env"><span class="dot"></span>%s</span>
             </div>
         </div>
+
+        <div class="nav-switch">
+            <button class="nav-btn active" id="btnModeRoutes" onclick="switchView('routes')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                Route &amp; API Tester
+            </button>
+            <button class="nav-btn" id="btnModeDB" onclick="switchView('database')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                Database Inspector
+            </button>
+        </div>
+
         <div>
             <a href="/_studio/openapi.json" target="_blank" style="color: var(--text-secondary); text-decoration: none; font-size: 12px; display: flex; align-items: center; gap: 6px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
@@ -232,7 +251,8 @@ func (s *Studio) RenderHTML() string {
         </div>
     </header>
 
-    <div class="main-layout">
+    <!-- 1. VIEW: ROUTE & API TESTER -->
+    <div class="main-layout" id="viewRoutes">
         <aside class="sidebar">
             <div class="search-box">
                 <input type="text" id="filter" class="search-input" placeholder="Cari rute, path, method..." oninput="filterRoutes()">
@@ -267,17 +287,12 @@ func (s *Studio) RenderHTML() string {
                         <button class="tab-btn active">Pratinjau Live</button>
                         <button class="tab-btn">Raw Response</button>
                         <button class="tab-btn">Headers</button>
-                        <div class="viewport-switch">
-                            <button class="vp-btn active">Desktop</button>
-                            <button class="vp-btn">Tablet</button>
-                            <button class="vp-btn">Mobile</button>
-                        </div>
                     </div>
-                    <div class="panel-body">
+                    <div class="panel-body" id="resPanel">
                         <div class="empty-state">
                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
                             <div style="font-weight: 500; color: var(--text-primary); font-size: 14px;">Pilih Rute &amp; Kirim Request</div>
-                            <div style="font-size: 12px; max-width: 320px;">Klik tombol Kirim Request neng ndhuwur nggo ndeleng respons live data utawa tampilan HTML.</div>
+                            <div style="font-size: 12px; max-width: 320px;">Klik tombol Kirim Permintaan neng ndhuwur nggo ndeleng respons live data utawa tampilan HTML.</div>
                         </div>
                     </div>
                 </div>
@@ -285,8 +300,62 @@ func (s *Studio) RenderHTML() string {
         </main>
     </div>
 
+    <!-- 2. VIEW: DATABASE INSPECTOR -->
+    <div class="main-layout" id="viewDatabase" style="display: none;">
+        <aside class="sidebar">
+            <div class="search-box">
+                <input type="text" id="dbFilter" class="search-input" placeholder="Cari tabel database..." oninput="filterTables()">
+            </div>
+            <div class="table-list" id="tableList">
+                <div style="padding: 12px; font-size: 12px; color: var(--text-muted);">Ngunggah daftar tabel...</div>
+            </div>
+        </aside>
+
+        <main class="content">
+            <div class="db-header-bar">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-amber);"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                    <span id="curTableName" style="font-weight: 600; font-size: 14px;">Pilih Tabel Database</span>
+                    <span class="badge badge-ver" id="curTableRowCount">0 baris</span>
+                </div>
+                <div>
+                    <button class="nav-btn" onclick="refreshTableData()" style="background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        Muat Ulang
+                    </button>
+                </div>
+            </div>
+
+            <div class="data-table-wrap" id="dbTableArea">
+                <div class="empty-state">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                    <div style="font-weight: 500; color: var(--text-primary); font-size: 14px;">Pilih Tabel neng Sebelah Kiwa</div>
+                    <div style="font-size: 12px; max-width: 340px;">Pilih salah siji tabel database nggo ndeleng struktur kolom lan isi data rekaman kanthi visual.</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
     <script>
         const routes = %s;
+        let dbTables = [];
+        let selectedTable = '';
+
+        function switchView(mode) {
+            if (mode === 'routes') {
+                document.getElementById('viewRoutes').style.display = 'flex';
+                document.getElementById('viewDatabase').style.display = 'none';
+                document.getElementById('btnModeRoutes').classList.add('active');
+                document.getElementById('btnModeDB').classList.remove('active');
+            } else {
+                document.getElementById('viewRoutes').style.display = 'none';
+                document.getElementById('viewDatabase').style.display = 'flex';
+                document.getElementById('btnModeDB').classList.add('active');
+                document.getElementById('btnModeRoutes').classList.remove('active');
+                loadTables();
+            }
+        }
+
         function renderRoutes(list) {
             const el = document.getElementById('routeList');
             el.innerHTML = '';
@@ -305,6 +374,7 @@ func (s *Studio) RenderHTML() string {
                 el.appendChild(card);
             });
         }
+
         function selectRoute(r, card) {
             document.querySelectorAll('.route-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
@@ -312,26 +382,165 @@ func (s *Studio) RenderHTML() string {
             document.getElementById('curMethod').className = 'method-badge m-' + r.method;
             document.getElementById('curUrl').value = '%s' + r.path;
         }
+
         function filterRoutes() {
             const q = document.getElementById('filter').value.toLowerCase();
             const filtered = routes.filter(r => r.path.toLowerCase().includes(q) || r.method.toLowerCase().includes(q) || r.target.toLowerCase().includes(q));
             renderRoutes(filtered);
         }
+
         function sendReq() {
-            alert('Ngirim request maring rute: ' + document.getElementById('curUrl').value);
+            const url = document.getElementById('curUrl').value;
+            const method = document.getElementById('curMethod').textContent;
+            const resPanel = document.getElementById('resPanel');
+            resPanel.innerHTML = '<div style="font-size:12px; color:var(--text-muted);">Ngirim panjalukan...</div>';
+            
+            fetch(url, { method: method })
+                .then(r => r.text().then(t => ({ status: r.status, ok: r.ok, text: t, type: r.headers.get('content-type') || '' })))
+                .then(res => {
+                    resPanel.innerHTML = `+"`"+`
+                        <div style="margin-bottom:12px; display:flex; gap:8px;">
+                            <span class="badge" style="background:${res.ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; color:${res.ok ? 'var(--color-emerald)' : 'var(--color-rose)'}">Status: ${res.status}</span>
+                        </div>
+                        <pre style="background:var(--bg-base); padding:12px; border-radius:6px; font-family:var(--font-mono); font-size:12px; overflow:auto; max-height:450px;">${escapeHtml(res.text)}</pre>
+                    `+"`"+`;
+                })
+                .catch(err => {
+                    resPanel.innerHTML = '<div style="color:var(--color-rose); font-size:12px;">Kliru: ' + err.message + '</div>';
+                });
         }
+
+        function loadTables() {
+            fetch('/_studio/api/database/tables')
+                .then(r => r.json())
+                .then(d => {
+                    dbTables = d.tables || [];
+                    renderTables(dbTables);
+                    if (dbTables.length > 0 && !selectedTable) {
+                        selectTable(dbTables[0].name);
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('tableList').innerHTML = '<div style="padding:12px; font-size:12px; color:var(--color-rose);">Gagal ngunggah tabel: ' + err.message + '</div>';
+                });
+        }
+
+        function renderTables(list) {
+            const el = document.getElementById('tableList');
+            el.innerHTML = '';
+            if (list.length === 0) {
+                el.innerHTML = '<div style="padding:12px; font-size:12px; color:var(--text-muted);">Laka tabel database sing ditemokna.</div>';
+                return;
+            }
+            list.forEach(t => {
+                const card = document.createElement('div');
+                card.className = 'table-card' + (t.name === selectedTable ? ' active' : '');
+                card.innerHTML = `+"`"+`
+                    <div class="table-card-top">
+                        <span style="font-weight:600; font-size:13px; font-family:var(--font-mono); color:var(--text-primary);">${t.name}</span>
+                        <span class="badge badge-ver">${t.rows} baris</span>
+                    </div>
+                `+"`"+`;
+                card.onclick = () => {
+                    document.querySelectorAll('.table-card').forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
+                    selectTable(t.name);
+                };
+                el.appendChild(card);
+            });
+        }
+
+        function filterTables() {
+            const q = document.getElementById('dbFilter').value.toLowerCase();
+            renderTables(dbTables.filter(t => t.name.toLowerCase().includes(q)));
+        }
+
+        function selectTable(tableName) {
+            selectedTable = tableName;
+            document.getElementById('curTableName').textContent = tableName;
+            refreshTableData();
+        }
+
+        function refreshTableData() {
+            if (!selectedTable) return;
+            const area = document.getElementById('dbTableArea');
+            area.innerHTML = '<div style="font-size:12px; color:var(--text-muted);">Ngunggah data tabel...</div>';
+
+            fetch('/_studio/api/database/table?name=' + encodeURIComponent(selectedTable))
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('curTableRowCount').textContent = (d.total || (d.rows ? d.rows.length : 0)) + ' baris';
+                    if (!d.rows || d.rows.length === 0) {
+                        area.innerHTML = '<div class="empty-state"><div style="color:var(--text-muted); font-size:13px;">Tabel kosong (durung ana data).</div></div>';
+                        return;
+                    }
+                    let html = '<table class="db-table"><thead><tr>';
+                    d.columns.forEach(col => { html += `+"`"+`<th>${col}</th>`+"`"+`; });
+                    html += '</tr></thead><tbody>';
+                    d.rows.forEach(r => {
+                        html += '<tr>';
+                        d.columns.forEach(col => {
+                            const val = r[col] !== undefined && r[col] !== null ? escapeHtml(String(r[col])) : '<span style="color:var(--text-muted); font-style:italic;">NULL</span>';
+                            html += `+"`"+`<td>${val}</td>`+"`"+`;
+                        });
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table>';
+                    area.innerHTML = html;
+                })
+                .catch(err => {
+                    area.innerHTML = '<div style="color:var(--color-rose); font-size:12px;">Gagal maca isi tabel: ' + err.message + '</div>';
+                });
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
         renderRoutes(routes);
     </script>
 </body>
 </html>`, s.Version, s.AppEnv, s.BaseURL, string(routesJSON), s.BaseURL)
 }
 
-// Handler returns the HTTP handler function for Studio requests.
+// Handler returns the HTTP handler function for Studio requests and API endpoints.
 func (s *Studio) Handler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/_studio/openapi.json" || r.URL.Path == "/studio/openapi.json" {
+		path := r.URL.Path
+
+		if path == "/_studio/openapi.json" || path == "/studio/openapi.json" {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			_ = json.NewEncoder(w).Encode(s.GenerateOpenAPI())
+			return
+		}
+
+		if path == "/_studio/api/database/tables" || path == "/studio/api/database/tables" {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			tables, err := InspectTables()
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				_ = json.NewEncoder(w).Encode(map[string]any{"error": err.Error(), "tables": []any{}})
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"tables": tables})
+			return
+		}
+
+		if path == "/_studio/api/database/table" || path == "/studio/api/database/table" {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			tableName := r.URL.Query().Get("name")
+			if tableName == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				_ = json.NewEncoder(w).Encode(map[string]any{"error": "parameter 'name' dibutuhna"})
+				return
+			}
+			data, err := InspectTableData(tableName, 50, 0)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				_ = json.NewEncoder(w).Encode(map[string]any{"error": err.Error()})
+				return
+			}
+			_ = json.NewEncoder(w).Encode(data)
 			return
 		}
 
