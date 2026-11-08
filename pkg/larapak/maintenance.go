@@ -251,3 +251,4 @@ func Maintenance(customPath ...string) MiddlewareFunc {
 		}
 	}
 }
+

@@ -97,3 +97,4 @@ func (p *Profiler) Stats() (int, float64) {
 	}
 	return len(p.queries), totalMS
 }
+

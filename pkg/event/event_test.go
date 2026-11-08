@@ -67,3 +67,4 @@ func TestEventDispatcherAsync(t *testing.T) {
 		t.Fatal("async listener timed out")
 	}
 }
+

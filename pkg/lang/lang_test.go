@@ -70,3 +70,4 @@ func TestTranslator(t *testing.T) {
 		t.Fatalf("unexpected translation in en: got %q", res6)
 	}
 }
+

@@ -124,3 +124,4 @@ func Dispatch(eventName string, payload any) []error {
 func DispatchAsync(eventName string, payload any) {
 	GetDispatcher().DispatchAsync(eventName, payload)
 }
+

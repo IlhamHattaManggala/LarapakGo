@@ -274,3 +274,4 @@ func SetLocale(locale string) {
 func GetLocale() string {
 	return GetTranslator().GetLocale()
 }
+
