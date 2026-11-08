@@ -164,6 +164,20 @@ func main() {
 		}
 		createSeeder(args[0])
 
+	case "make:factory", "gawe:pabrik":
+		if len(args) < 1 {
+			fmt.Println("Kliru: Wei jeneng pabrik (factory) ndisit. Contohe: larapak gawe:pabrik User")
+			os.Exit(1)
+		}
+		createFactory(args[0])
+
+	case "make:resource-api", "make:api-resource", "gawe:sumber-api", "gawe:resource-api":
+		if len(args) < 1 {
+			fmt.Println("Kliru: Wei jeneng resource transformer ndisit. Contohe: larapak gawe:sumber-api User")
+			os.Exit(1)
+		}
+		createApiResource(args[0])
+
 	case "make:migration", "gawe:migrasi":
 		if len(args) < 1 {
 			fmt.Println("Kliru: Wei jeneng migrasi ndisit. Contohe: larapak gawe:migrasi create_users_table")
@@ -292,6 +306,8 @@ Perintah Dialek Ngapak (Asli):
   larapak gawe:pencegat <NamaMiddleware>        (Gawe middleware anyar)
   larapak gawe:gawean <NamaJob>                 (Gawe background queue job)
   larapak gawe:bibit <NamaSeeder>               (Gawe database seeder)
+  larapak gawe:pabrik <NamaFactory>             (Gawe model factory fake data)
+  larapak gawe:sumber-api <NamaResource>        (Gawe JSON API Resource Transformer)
   larapak migrasi                               (Jalankna migrasi database)
   larapak migrasi:anyar [--seed]                (Reset & migrasi anyar)
   larapak migrasi:status                        (Status tabel migrasi)
@@ -307,7 +323,7 @@ Perintah Dialek Ngapak (Asli):
   larapak tulung                                (Ndeleng panduan kiye)
 
 Perintah Standar (Laravel Artisan Style):
-  larapak new, serve, route:list, make:auth, make:resource, make:controller, make:model, make:live, make:migration,
+  larapak new, serve, route:list, make:auth, make:resource, make:resource-api, make:controller, make:model, make:factory, make:live, make:migration,
   make:middleware, make:job, make:seeder, migrate, migrate:fresh, migrate:status,
   rollback, db:seed, queue:work, cache:clear, css:build, run, repl, test, help, version
 
@@ -1113,6 +1129,15 @@ func createModel(name string) {
 kelas %s extends Model
     tabel = "%s"
     bisa_diisi = ["id", "jeneng", "email"]
+
+    # Contoh Relasi (Relationships):
+    # gawe artikels()
+    #     balekna db.duwe_akeh(iki, "artikels", "user_id")
+    # rampung
+    #
+    # gawe profil()
+    #     balekna db.duwe_siji(iki, "profils", "user_id")
+    # rampung
 rampung
 `, name, name, tableName)
 
@@ -1122,6 +1147,117 @@ rampung
 		return
 	}
 	fmt.Printf("✓ Model sukses digawe: %s\n", filepath.ToSlash(filePath))
+}
+
+func createFactory(name string) {
+	if !strings.HasSuffix(name, "Factory") && !strings.HasSuffix(name, "factory") {
+		name += "Factory"
+	}
+	p := paths.GetPaths(".")
+	dir := p.Factories
+	if dir == "" {
+		dir = filepath.Join("database", "factories")
+	}
+	_ = os.MkdirAll(dir, 0755)
+
+	modelBase := strings.TrimSuffix(strings.TrimSuffix(name, "Factory"), "factory")
+	tableName := strings.ToLower(modelBase) + "s"
+
+	content := fmt.Sprintf(`# Factory %s nggo LarapakGo
+
+gawe wujud()
+    balekna {
+        "jeneng": pabrik.jeneng(),
+        "email": pabrik.email(),
+        "hp": pabrik.hp(),
+        "alamat": pabrik.alamat(),
+        "kutha": pabrik.kutha(),
+        "angka": pabrik.angka(10, 100),
+        "rega": pabrik.rega(15000, 250000),
+        "status": pabrik.pilihan(["aktif", "pending", "nonaktif"])
+    }
+rampung
+
+# Fungsi pembantu nggo nandur data akeh langsung maring tabel
+gawe tandur(jumlah)
+    nek jumlah == kosong ya
+        jumlah = 10
+    rampung
+    balekna pabrik.gawe("%s", jumlah, gawe(i)
+        balekna wujud()
+    rampung)
+rampung
+`, name, tableName)
+
+	filePath := filepath.Join(dir, name+".ngpk")
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		fmt.Printf("Gagal nggawe factory: %v\n", err)
+		return
+	}
+	fmt.Printf("✓ Model Factory sukses digawe: %s\n", filepath.ToSlash(filePath))
+}
+
+func createApiResource(name string) {
+	if !strings.HasSuffix(name, "Resource") && !strings.HasSuffix(name, "resource") {
+		name += "Resource"
+	}
+	p := paths.GetPaths(".")
+	dir := p.Resources
+	if dir == "" {
+		dir = filepath.Join("app", "Resources")
+	}
+	_ = os.MkdirAll(dir, 0755)
+
+	content := fmt.Sprintf(`# JSON API Resource Transformer %s nggo LarapakGo
+
+gawe transform(item)
+    balekna {
+        "id": item.id,
+        "jeneng": item.jeneng,
+        "email": item.email,
+        "digawe_nalika": item.created_at
+    }
+rampung
+`, name)
+
+	filePath := filepath.Join(dir, name+".ngpk")
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		fmt.Printf("Gagal nggawe API resource transformer: %v\n", err)
+		return
+	}
+	fmt.Printf("✓ API Resource Transformer sukses digawe: %s\n", filepath.ToSlash(filePath))
+}
+
+func createSeeder(name string) {
+	if !strings.HasSuffix(name, "Seeder") && !strings.HasSuffix(name, "seeder") {
+		name += "Seeder"
+	}
+	p := paths.GetPaths(".")
+	dir := p.Seeders
+	_ = os.MkdirAll(dir, 0755)
+
+	content := fmt.Sprintf(`# Seeder %s nggo LarapakGo
+
+gawe tandang(db)
+    tulis("Lagi nandur bibit seeder: %s...")
+    
+    # Nandur data nganggo pabrik fake data generator:
+    pabrik.gawe("users", 10, gawe(i)
+        balekna {
+            "jeneng": pabrik.jeneng(),
+            "email": pabrik.email(),
+            "password": sandi.gawe("password123")
+        }
+    rampung)
+rampung
+`, name, name)
+
+	filePath := filepath.Join(dir, name+".ngpk")
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		fmt.Printf("Gagal nggawe seeder: %v\n", err)
+		return
+	}
+	fmt.Printf("✓ Database Seeder sukses digawe: %s\n", filepath.ToSlash(filePath))
 }
 
 func createMiddleware(name string) {
@@ -1173,28 +1309,6 @@ rampung
 	fmt.Printf("✓ Job antrean sukses digawe: %s\n", filepath.ToSlash(filePath))
 }
 
-func createSeeder(name string) {
-	if !strings.HasSuffix(name, "Seeder") && !strings.HasSuffix(name, "seeder") {
-		name += "Seeder"
-	}
-	p := paths.GetPaths(".")
-	dir := p.Seeders
-	_ = os.MkdirAll(dir, 0755)
-
-	content := fmt.Sprintf(`# Seeder %s nggo LarapakGo
-
-gawe tandang(db)
-    tulis("Lagi nandur bibit seeder: %s")
-rampung
-`, name, name)
-
-	filePath := filepath.Join(dir, name+".ngpk")
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
-		fmt.Printf("Gagal nggawe seeder: %v\n", err)
-		return
-	}
-	fmt.Printf("✓ Database Seeder sukses digawe: %s\n", filepath.ToSlash(filePath))
-}
 
 func createMigration(name string) {
 	p := paths.GetPaths(".")
@@ -1959,8 +2073,44 @@ func showMigrationStatus() {
 
 func runSeeders() {
 	p := paths.GetPaths(".")
-	fmt.Printf("Ngisi bibit data awal maring database saka '%s'...\n", filepath.ToSlash(p.Seeders))
-	fmt.Println("✓ DatabaseSeeder sukses dieksekusi.")
+	seederDir := p.Seeders
+	if _, err := os.Stat(seederDir); os.IsNotExist(err) {
+		fmt.Printf("Folder seeder '%s' durung ana. Nggawe folder...\n", filepath.ToSlash(seederDir))
+		_ = os.MkdirAll(seederDir, 0755)
+		createSeeder("DatabaseSeeder")
+	}
+
+	entries, err := os.ReadDir(seederDir)
+	if err != nil || len(entries) == 0 {
+		fmt.Printf("Laka berkas seeder .ngpk neng '%s'.\n", filepath.ToSlash(seederDir))
+		return
+	}
+
+	fmt.Printf("Ngisi bibit data awal maring database saka '%s'...\n", filepath.ToSlash(seederDir))
+
+	app := larapak.New()
+	vEngine := view.New(p.Views)
+	ngpkEngine := ngapak.NewEngine(".", vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	executed := 0
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".ngpk") {
+			filePath := filepath.Join(seederDir, e.Name())
+			_, err := ngpkEngine.RunFile(filePath)
+			if err != nil {
+				fmt.Printf("  [!] Seeder %s: %v\n", e.Name(), err)
+			} else {
+				fmt.Printf("  ✓ Seeder: %s [SUKSES]\n", e.Name())
+				executed++
+			}
+		}
+	}
+	if executed > 0 {
+		fmt.Printf("✓ DatabaseSeeder sukses dieksekusi (%d seeder rampung).\n", executed)
+	} else {
+		fmt.Println("✓ DatabaseSeeder sukses dieksekusi.")
+	}
 }
 
 func runQueueWorker() {

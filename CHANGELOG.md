@@ -95,6 +95,31 @@ Versi 1.0.0 menandai peluncuran perdana arsitektur web framework Larapak yang di
   - Operasi berkas storage: `storage.simpen`, `storage.jupuk`, `storage.ana`, `storage.busak`, `storage.dalan`.
   - Helper template `{{ asset("path") }}` / `{{ aset("path") }}` dan evaluasi fallback interpolasi `{{ old.field || item.field }}`.
 
+- **Asosiasi Relasi Database Model (`duwe_akeh`, `has_many`, `melu`, `belongs_to`, `duwe_siji`, `has_one`)**:
+  - Relasi `has_many` (`duwe_akeh`) untuk relasi satu-ke-banyak antar model dan tabel.
+  - Relasi `belongs_to` (`melu`) untuk relasi child ke induk dengan deteksi foreign key otomatis.
+  - Relasi `has_one` (`duwe_siji`) untuk relasi satu-ke-satu.
+  - Integrasi fluent chaining langsung pada record: `user.duwe_akeh("artikels").neng("status", "publikasi").jupuk()`.
+  - Dukungan pemanggilan global via `db.duwe_akeh(user, "artikels")` dan `db.melu(artikel, "users")`.
+
+- **Mesin Faker & Generator Model Factory (`pkg/factory`, `make:factory` / `gawe:pabrik`)**:
+  - Generator data palsu 100% Go Standard Library berbasis `crypto/rand` tanpa dependensi eksternal.
+  - Objek global `pabrik` dan `factory`: `jeneng()` / `name()`, `email()`, `hp()` / `phone()`, `alamat()` / `address()`, `kutha()` / `city()`, `teks()` / `text()`, `angka()` / `number()`, `rega()` / `price()`, `pilihan()` / `choice()`, `tanggal()` / `date()`, `uuid()`.
+  - Batch data inserter otomatis via `pabrik.gawe("tabel", jumlah, callback)`.
+  - CLI `larapak make:factory <Nama>` atau `larapak gawe:pabrik <Nama>`.
+  - Eksekusi database seeder native via `larapak db:seed` / `larapak bibiti` yang membaca dan mengeksekusi berkas `.ngpk` di direktori seeders.
+
+- **Middleware Response Caching (`rute.cache` / `rute.simpen_cache`)**:
+  - Caching in-memory berkecepatan tinggi untuk rute GET dengan durasi TTL yang dapat dikonfigurasi.
+  - Dukungan perataan rute `rute.cache(detik)` dan chaining per rute `rute.get(...).cache(detik)`.
+  - Header respons diagnostik otomatis `X-Larapak-Cache: HIT` dan `X-Larapak-Cache: MISS`.
+
+- **JSON API Resource Transformer (`make:resource-api` / `gawe:sumber-api`, `res.resource`)**:
+  - Standardisasi respons API JSON sesuai format JSON:API modern dengan wrapper `data` dan `meta`.
+  - Perintah generator CLI `larapak make:resource-api <Nama>` / `larapak gawe:sumber-api <Nama>`.
+  - Helper controller `res.resource(data, "NamaResource")` / `res.sumber(...)` atau menggunakan closure `gawe(item) ... rampung`.
+  - Mendukung transformasi rekaman tunggal (single record), daftar rekaman (list), maupun hasil paginasi (`.kaca()` / `.paginate()`) dengan metadata otomatis.
+
 - **Dual-Language CLI & Multi-Language Directory Scaffolding**:
   - Mendukung 22 pasangan perintah dalam bahasa Inggris dan dialek Ngapak Tegalan (`anyar`, `ladeni`, `dalan:daptar`, `gawe:pangatur`, `munggah`, `mudhun`, `resik:cache`, dll).
   - Dukungan pembuatan struktur direktori multi-bahasa (`--bahasa=ngapak|indonesia|english`).

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/IlhamHattaManggala/larapak-go/pkg/database"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/factory"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/larapak"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/mail"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/paths"
@@ -130,6 +131,26 @@ func (eng *Engine) BindRoutesWithStudio(app *larapak.App, st *studio.Studio) {
 			app.Use(larapak.Throttle(maxReq, time.Duration(windowSec)*time.Second))
 			return nil, nil
 		},
+		"cache": func(args []any) (any, error) {
+			sec := 60
+			if len(args) > 0 {
+				if s, ok := toInt(args[0]); ok {
+					sec = s
+				}
+			}
+			app.Use(larapak.CacheResponse(time.Duration(sec) * time.Second))
+			return nil, nil
+		},
+		"simpen_cache": func(args []any) (any, error) {
+			sec := 60
+			if len(args) > 0 {
+				if s, ok := toInt(args[0]); ok {
+					sec = s
+				}
+			}
+			app.Use(larapak.CacheResponse(time.Duration(sec) * time.Second))
+			return nil, nil
+		},
 	}
 
 	eng.Evaluator.Globals.Set("rute", ruteObj)
@@ -206,8 +227,407 @@ func (eng *Engine) BindRoutesWithStudio(app *larapak.App, st *studio.Studio) {
 				},
 			}, nil
 		},
+		"duwe_akeh": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("db.duwe_akeh mbutuhna record induk lan jeneng tabel relasi")
+			}
+			rec, ok := args[0].(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("record kudu awujud map")
+			}
+			relTable := fmt.Sprintf("%v", args[1])
+			fk := ""
+			pk := "id"
+			if len(args) > 2 && args[2] != nil {
+				fk = fmt.Sprintf("%v", args[2])
+			}
+			if len(args) > 3 && args[3] != nil {
+				pk = fmt.Sprintf("%v", args[3])
+			}
+			conn, err := database.GetManager().Connection()
+			if err != nil {
+				return nil, err
+			}
+			qb, err := database.HasMany(conn, "", rec, relTable, fk, pk)
+			if err != nil {
+				return nil, err
+			}
+			return createQueryBuilderBridge(qb), nil
+		},
+		"has_many": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("db.has_many requires parent record and relation table name")
+			}
+			rec, ok := args[0].(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("record must be a map")
+			}
+			relTable := fmt.Sprintf("%v", args[1])
+			fk := ""
+			pk := "id"
+			if len(args) > 2 && args[2] != nil {
+				fk = fmt.Sprintf("%v", args[2])
+			}
+			if len(args) > 3 && args[3] != nil {
+				pk = fmt.Sprintf("%v", args[3])
+			}
+			conn, err := database.GetManager().Connection()
+			if err != nil {
+				return nil, err
+			}
+			qb, err := database.HasMany(conn, "", rec, relTable, fk, pk)
+			if err != nil {
+				return nil, err
+			}
+			return createQueryBuilderBridge(qb), nil
+		},
+		"melu": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("db.melu mbutuhna record anak lan jeneng tabel induk")
+			}
+			rec, ok := args[0].(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("record kudu awujud map")
+			}
+			parentTable := fmt.Sprintf("%v", args[1])
+			fk := ""
+			ownerKey := "id"
+			if len(args) > 2 && args[2] != nil {
+				fk = fmt.Sprintf("%v", args[2])
+			}
+			if len(args) > 3 && args[3] != nil {
+				ownerKey = fmt.Sprintf("%v", args[3])
+			}
+			conn, err := database.GetManager().Connection()
+			if err != nil {
+				return nil, err
+			}
+			qb, err := database.BelongsTo(conn, rec, parentTable, fk, ownerKey)
+			if err != nil {
+				return nil, err
+			}
+			return createQueryBuilderBridge(qb), nil
+		},
+		"belongs_to": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("db.belongs_to requires child record and parent table name")
+			}
+			rec, ok := args[0].(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("record must be a map")
+			}
+			parentTable := fmt.Sprintf("%v", args[1])
+			fk := ""
+			ownerKey := "id"
+			if len(args) > 2 && args[2] != nil {
+				fk = fmt.Sprintf("%v", args[2])
+			}
+			if len(args) > 3 && args[3] != nil {
+				ownerKey = fmt.Sprintf("%v", args[3])
+			}
+			conn, err := database.GetManager().Connection()
+			if err != nil {
+				return nil, err
+			}
+			qb, err := database.BelongsTo(conn, rec, parentTable, fk, ownerKey)
+			if err != nil {
+				return nil, err
+			}
+			return createQueryBuilderBridge(qb), nil
+		},
+		"duwe_siji": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("db.duwe_siji mbutuhna record induk lan jeneng tabel relasi")
+			}
+			rec, ok := args[0].(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("record kudu awujud map")
+			}
+			relTable := fmt.Sprintf("%v", args[1])
+			fk := ""
+			pk := "id"
+			if len(args) > 2 && args[2] != nil {
+				fk = fmt.Sprintf("%v", args[2])
+			}
+			if len(args) > 3 && args[3] != nil {
+				pk = fmt.Sprintf("%v", args[3])
+			}
+			conn, err := database.GetManager().Connection()
+			if err != nil {
+				return nil, err
+			}
+			qb, err := database.HasOne(conn, "", rec, relTable, fk, pk)
+			if err != nil {
+				return nil, err
+			}
+			return createQueryBuilderBridge(qb), nil
+		},
+		"has_one": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("db.has_one requires parent record and relation table name")
+			}
+			rec, ok := args[0].(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("record must be a map")
+			}
+			relTable := fmt.Sprintf("%v", args[1])
+			fk := ""
+			pk := "id"
+			if len(args) > 2 && args[2] != nil {
+				fk = fmt.Sprintf("%v", args[2])
+			}
+			if len(args) > 3 && args[3] != nil {
+				pk = fmt.Sprintf("%v", args[3])
+			}
+			conn, err := database.GetManager().Connection()
+			if err != nil {
+				return nil, err
+			}
+			qb, err := database.HasOne(conn, "", rec, relTable, fk, pk)
+			if err != nil {
+				return nil, err
+			}
+			return createQueryBuilderBridge(qb), nil
+		},
 	}
 	eng.Evaluator.Globals.Set("db", dbObj)
+
+	// Bind 'pabrik' and 'factory' global objects for fake data generation & seeding
+	faker := factory.Default()
+	pabrikObj := map[string]any{
+		"jeneng": func(args []any) (any, error) {
+			return faker.Jeneng(), nil
+		},
+		"name": func(args []any) (any, error) {
+			return faker.Name(), nil
+		},
+		"email": func(args []any) (any, error) {
+			if len(args) > 0 {
+				return faker.Email(fmt.Sprintf("%v", args[0])), nil
+			}
+			return faker.Email(), nil
+		},
+		"hp": func(args []any) (any, error) {
+			return faker.HP(), nil
+		},
+		"phone": func(args []any) (any, error) {
+			return faker.Phone(), nil
+		},
+		"alamat": func(args []any) (any, error) {
+			return faker.Alamat(), nil
+		},
+		"address": func(args []any) (any, error) {
+			return faker.Address(), nil
+		},
+		"kutha": func(args []any) (any, error) {
+			return faker.Kutha(), nil
+		},
+		"city": func(args []any) (any, error) {
+			return faker.City(), nil
+		},
+		"teks": func(args []any) (any, error) {
+			words := 10
+			if len(args) > 0 {
+				if w, ok := toInt(args[0]); ok {
+					words = w
+				}
+			}
+			return faker.Teks(words), nil
+		},
+		"text": func(args []any) (any, error) {
+			words := 10
+			if len(args) > 0 {
+				if w, ok := toInt(args[0]); ok {
+					words = w
+				}
+			}
+			return faker.Text(words), nil
+		},
+		"angka": func(args []any) (any, error) {
+			minVal := 1
+			maxVal := 100
+			if len(args) > 0 {
+				if m, ok := toInt(args[0]); ok {
+					minVal = m
+				}
+			}
+			if len(args) > 1 {
+				if m, ok := toInt(args[1]); ok {
+					maxVal = m
+				}
+			}
+			return faker.Angka(minVal, maxVal), nil
+		},
+		"number": func(args []any) (any, error) {
+			minVal := 1
+			maxVal := 100
+			if len(args) > 0 {
+				if m, ok := toInt(args[0]); ok {
+					minVal = m
+				}
+			}
+			if len(args) > 1 {
+				if m, ok := toInt(args[1]); ok {
+					maxVal = m
+				}
+			}
+			return faker.Number(minVal, maxVal), nil
+		},
+		"rega": func(args []any) (any, error) {
+			minVal := 5000
+			maxVal := 100000
+			if len(args) > 0 {
+				if m, ok := toInt(args[0]); ok {
+					minVal = m
+				}
+			}
+			if len(args) > 1 {
+				if m, ok := toInt(args[1]); ok {
+					maxVal = m
+				}
+			}
+			return faker.Rega(minVal, maxVal), nil
+		},
+		"price": func(args []any) (any, error) {
+			minVal := 5000
+			maxVal := 100000
+			if len(args) > 0 {
+				if m, ok := toInt(args[0]); ok {
+					minVal = m
+				}
+			}
+			if len(args) > 1 {
+				if m, ok := toInt(args[1]); ok {
+					maxVal = m
+				}
+			}
+			return faker.Price(minVal, maxVal), nil
+		},
+		"bener_salah": func(args []any) (any, error) {
+			return faker.BenerSalah(), nil
+		},
+		"boolean": func(args []any) (any, error) {
+			return faker.Boolean(), nil
+		},
+		"tanggal": func(args []any) (any, error) {
+			return faker.Tanggal(), nil
+		},
+		"date": func(args []any) (any, error) {
+			return faker.Date(), nil
+		},
+		"pilihan": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, nil
+			}
+			if list, ok := args[0].([]any); ok {
+				return faker.Pilihan(list), nil
+			}
+			return faker.Pilihan(args), nil
+		},
+		"choice": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, nil
+			}
+			if list, ok := args[0].([]any); ok {
+				return faker.Choice(list), nil
+			}
+			return faker.Choice(args), nil
+		},
+		"uuid": func(args []any) (any, error) {
+			return faker.UUID(), nil
+		},
+		"id_unik": func(args []any) (any, error) {
+			return faker.UUID(), nil
+		},
+		"gawe": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("pabrik.gawe mbutuhna jeneng tabel lan jumlah/generator")
+			}
+			tableName := fmt.Sprintf("%v", args[0])
+			count := 1
+			var genFn any
+			if c, ok := toInt(args[1]); ok {
+				count = c
+				if len(args) > 2 {
+					genFn = args[2]
+				}
+			} else {
+				genFn = args[1]
+			}
+			conn, err := database.GetManager().Connection()
+			if err != nil {
+				return nil, err
+			}
+			var created []any
+			for i := 0; i < count; i++ {
+				var itemData map[string]any
+				if fn, ok := genFn.(*Function); ok {
+					res, err := eng.Evaluator.CallCallable(fn, []any{i + 1})
+					if err != nil {
+						return nil, err
+					}
+					if m, ok := res.(map[string]any); ok {
+						itemData = m
+					}
+				} else if dMap, ok := genFn.(map[string]any); ok {
+					itemData = dMap
+				}
+				if itemData != nil {
+					_, err := conn.Table(tableName).Insert(itemData)
+					if err != nil {
+						return nil, err
+					}
+					created = append(created, itemData)
+				}
+			}
+			return created, nil
+		},
+		"create": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("factory.create requires table name and count/generator")
+			}
+			tableName := fmt.Sprintf("%v", args[0])
+			count := 1
+			var genFn any
+			if c, ok := toInt(args[1]); ok {
+				count = c
+				if len(args) > 2 {
+					genFn = args[2]
+				}
+			} else {
+				genFn = args[1]
+			}
+			conn, err := database.GetManager().Connection()
+			if err != nil {
+				return nil, err
+			}
+			var created []any
+			for i := 0; i < count; i++ {
+				var itemData map[string]any
+				if fn, ok := genFn.(*Function); ok {
+					res, err := eng.Evaluator.CallCallable(fn, []any{i + 1})
+					if err != nil {
+						return nil, err
+					}
+					if m, ok := res.(map[string]any); ok {
+						itemData = m
+					}
+				} else if dMap, ok := genFn.(map[string]any); ok {
+					itemData = dMap
+				}
+				if itemData != nil {
+					_, err := conn.Table(tableName).Insert(itemData)
+					if err != nil {
+						return nil, err
+					}
+					created = append(created, itemData)
+				}
+			}
+			return created, nil
+		},
+	}
+	eng.Evaluator.Globals.Set("pabrik", pabrikObj)
+	eng.Evaluator.Globals.Set("factory", pabrikObj)
 
 	// Bind 'sandi' and 'hash' global objects for password hashing
 	sandiObj := map[string]any{
@@ -602,6 +1022,90 @@ func createValidatorBridge(data map[string]any, rules map[string]string) map[str
 	return vBridge
 }
 
+func wrapRecord(row map[string]any, tableName string) map[string]any {
+	if row == nil {
+		return nil
+	}
+	wrapped := make(map[string]any, len(row)+9)
+	for k, v := range row {
+		wrapped[k] = v
+	}
+	wrapped["_tabel"] = tableName
+
+	conn, _ := database.GetManager().Connection()
+
+	// duwe_akeh / has_many
+	hasManyFn := func(args []any) (any, error) {
+		if len(args) == 0 {
+			return nil, fmt.Errorf("duwe_akeh mbutuhna jeneng tabel relasi")
+		}
+		relTable := fmt.Sprintf("%v", args[0])
+		fk := ""
+		pk := "id"
+		if len(args) > 1 && args[1] != nil {
+			fk = fmt.Sprintf("%v", args[1])
+		}
+		if len(args) > 2 && args[2] != nil {
+			pk = fmt.Sprintf("%v", args[2])
+		}
+		qb, err := database.HasMany(conn, tableName, wrapped, relTable, fk, pk)
+		if err != nil {
+			return nil, err
+		}
+		return createQueryBuilderBridge(qb), nil
+	}
+	wrapped["duwe_akeh"] = hasManyFn
+	wrapped["has_many"] = hasManyFn
+
+	// duwe_siji / has_one
+	hasOneFn := func(args []any) (any, error) {
+		if len(args) == 0 {
+			return nil, fmt.Errorf("duwe_siji mbutuhna jeneng tabel relasi")
+		}
+		relTable := fmt.Sprintf("%v", args[0])
+		fk := ""
+		pk := "id"
+		if len(args) > 1 && args[1] != nil {
+			fk = fmt.Sprintf("%v", args[1])
+		}
+		if len(args) > 2 && args[2] != nil {
+			pk = fmt.Sprintf("%v", args[2])
+		}
+		qb, err := database.HasOne(conn, tableName, wrapped, relTable, fk, pk)
+		if err != nil {
+			return nil, err
+		}
+		return createQueryBuilderBridge(qb), nil
+	}
+	wrapped["duwe_siji"] = hasOneFn
+	wrapped["has_one"] = hasOneFn
+
+	// melu / belongs_to
+	belongsToFn := func(args []any) (any, error) {
+		if len(args) == 0 {
+			return nil, fmt.Errorf("melu mbutuhna jeneng tabel induk")
+		}
+		parentTable := fmt.Sprintf("%v", args[0])
+		fk := ""
+		ownerKey := "id"
+		if len(args) > 1 && args[1] != nil {
+			fk = fmt.Sprintf("%v", args[1])
+		}
+		if len(args) > 2 && args[2] != nil {
+			ownerKey = fmt.Sprintf("%v", args[2])
+		}
+		qb, err := database.BelongsTo(conn, wrapped, parentTable, fk, ownerKey)
+		if err != nil {
+			return nil, err
+		}
+		return createQueryBuilderBridge(qb), nil
+	}
+	wrapped["melu"] = belongsToFn
+	wrapped["belongs_to"] = belongsToFn
+
+	return wrapped
+}
+
 func createQueryBuilderBridge(qb *database.QueryBuilder) map[string]any {
 	var bridge map[string]any
 	bridge = map[string]any{
@@ -630,6 +1134,14 @@ func createQueryBuilderBridge(qb *database.QueryBuilder) map[string]any {
 			return bridge, nil
 		},
 		"where": func(args []any) (any, error) {
+			if len(args) >= 3 {
+				qb.Where(fmt.Sprintf("%v", args[0]), fmt.Sprintf("%v", args[1]), args[2])
+			} else if len(args) == 2 {
+				qb.Where(fmt.Sprintf("%v", args[0]), "=", args[1])
+			}
+			return bridge, nil
+		},
+		"ngendi": func(args []any) (any, error) {
 			if len(args) >= 3 {
 				qb.Where(fmt.Sprintf("%v", args[0]), fmt.Sprintf("%v", args[1]), args[2])
 			} else if len(args) == 2 {
@@ -676,7 +1188,7 @@ func createQueryBuilderBridge(qb *database.QueryBuilder) map[string]any {
 			}
 			var list []any
 			for _, r := range res {
-				list = append(list, r)
+				list = append(list, wrapRecord(r, qb.TableName()))
 			}
 			return list, nil
 		},
@@ -687,7 +1199,29 @@ func createQueryBuilderBridge(qb *database.QueryBuilder) map[string]any {
 			}
 			var list []any
 			for _, r := range res {
-				list = append(list, r)
+				list = append(list, wrapRecord(r, qb.TableName()))
+			}
+			return list, nil
+		},
+		"kabeh": func(args []any) (any, error) {
+			res, err := qb.Get()
+			if err != nil {
+				return []any{}, nil
+			}
+			var list []any
+			for _, r := range res {
+				list = append(list, wrapRecord(r, qb.TableName()))
+			}
+			return list, nil
+		},
+		"all": func(args []any) (any, error) {
+			res, err := qb.Get()
+			if err != nil {
+				return []any{}, nil
+			}
+			var list []any
+			for _, r := range res {
+				list = append(list, wrapRecord(r, qb.TableName()))
 			}
 			return list, nil
 		},
@@ -696,14 +1230,34 @@ func createQueryBuilderBridge(qb *database.QueryBuilder) map[string]any {
 			if err != nil || row == nil {
 				return nil, nil
 			}
-			return row, nil
+			return wrapRecord(row, qb.TableName()), nil
 		},
 		"first": func(args []any) (any, error) {
 			row, err := qb.First()
 			if err != nil || row == nil {
 				return nil, nil
 			}
-			return row, nil
+			return wrapRecord(row, qb.TableName()), nil
+		},
+		"golek": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("golek mbutuhna id")
+			}
+			row, err := qb.Where("id", "=", args[0]).First()
+			if err != nil || row == nil {
+				return nil, nil
+			}
+			return wrapRecord(row, qb.TableName()), nil
+		},
+		"find": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("find requires id")
+			}
+			row, err := qb.Where("id", "=", args[0]).First()
+			if err != nil || row == nil {
+				return nil, nil
+			}
+			return wrapRecord(row, qb.TableName()), nil
 		},
 		"cacah": func(args []any) (any, error) {
 			return qb.Count()
@@ -738,6 +1292,15 @@ func createQueryBuilderBridge(qb *database.QueryBuilder) map[string]any {
 			}
 			return int64(0), fmt.Errorf("data kudu wujud dictionary")
 		},
+		"nganyari": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return int64(0), fmt.Errorf("nganyari mbutuhna data dictionary")
+			}
+			if dMap, ok := args[0].(map[string]any); ok {
+				return qb.Update(dMap)
+			}
+			return int64(0), fmt.Errorf("data kudu wujud dictionary")
+		},
 		"update": func(args []any) (any, error) {
 			if len(args) == 0 {
 				return int64(0), fmt.Errorf("update requires data map")
@@ -748,6 +1311,9 @@ func createQueryBuilderBridge(qb *database.QueryBuilder) map[string]any {
 			return int64(0), fmt.Errorf("data must be a map")
 		},
 		"busak": func(args []any) (any, error) {
+			return qb.Delete()
+		},
+		"mbusak": func(args []any) (any, error) {
 			return qb.Delete()
 		},
 		"delete": func(args []any) (any, error) {
@@ -770,7 +1336,18 @@ func createQueryBuilderBridge(qb *database.QueryBuilder) map[string]any {
 					perPage = pp
 				}
 			}
-			return qb.Paginate(page, perPage)
+			pag, err := qb.Paginate(page, perPage)
+			if err != nil {
+				return nil, err
+			}
+			if rawList, ok := pag["data"].([]map[string]any); ok {
+				var wrappedList []any
+				for _, r := range rawList {
+					wrappedList = append(wrappedList, wrapRecord(r, qb.TableName()))
+				}
+				pag["data"] = wrappedList
+			}
+			return pag, nil
 		},
 		"paginate": func(args []any) (any, error) {
 			page := 1
@@ -785,7 +1362,18 @@ func createQueryBuilderBridge(qb *database.QueryBuilder) map[string]any {
 					perPage = pp
 				}
 			}
-			return qb.Paginate(page, perPage)
+			pag, err := qb.Paginate(page, perPage)
+			if err != nil {
+				return nil, err
+			}
+			if rawList, ok := pag["data"].([]map[string]any); ok {
+				var wrappedList []any
+				for _, r := range rawList {
+					wrappedList = append(wrappedList, wrapRecord(r, qb.TableName()))
+				}
+				pag["data"] = wrappedList
+			}
+			return pag, nil
 		},
 	}
 	return bridge
@@ -855,7 +1443,8 @@ func (eng *Engine) registerRoute(app *larapak.App, st *studio.Studio, method str
 		app.PATCH(routePath, handler)
 	}
 
-	routeBridge := map[string]any{
+	var routeBridge map[string]any
+	routeBridge = map[string]any{
 		"wates": func(bArgs []any) (any, error) {
 			maxReq := 60
 			windowSec := 60
@@ -870,7 +1459,7 @@ func (eng *Engine) registerRoute(app *larapak.App, st *studio.Studio, method str
 				}
 			}
 			app.AddMiddlewareToLastRoute(larapak.Throttle(maxReq, time.Duration(windowSec)*time.Second))
-			return nil, nil
+			return routeBridge, nil
 		},
 		"throttle": func(bArgs []any) (any, error) {
 			maxReq := 60
@@ -886,7 +1475,27 @@ func (eng *Engine) registerRoute(app *larapak.App, st *studio.Studio, method str
 				}
 			}
 			app.AddMiddlewareToLastRoute(larapak.Throttle(maxReq, time.Duration(windowSec)*time.Second))
-			return nil, nil
+			return routeBridge, nil
+		},
+		"cache": func(bArgs []any) (any, error) {
+			sec := 60
+			if len(bArgs) > 0 {
+				if s, ok := toInt(bArgs[0]); ok {
+					sec = s
+				}
+			}
+			app.AddMiddlewareToLastRoute(larapak.CacheResponse(time.Duration(sec)*time.Second))
+			return routeBridge, nil
+		},
+		"simpen_cache": func(bArgs []any) (any, error) {
+			sec := 60
+			if len(bArgs) > 0 {
+				if s, ok := toInt(bArgs[0]); ok {
+					sec = s
+				}
+			}
+			app.AddMiddlewareToLastRoute(larapak.CacheResponse(time.Duration(sec)*time.Second))
+			return routeBridge, nil
 		},
 	}
 
@@ -1214,6 +1823,12 @@ func (eng *Engine) createContextBridge(c *larapak.Context) (map[string]any, map[
 			}
 			return nil, c.JSON(http.StatusOK, args[0])
 		},
+		"resource": func(args []any) (any, error) {
+			return eng.handleResourceResponse(c, args)
+		},
+		"sumber": func(args []any) (any, error) {
+			return eng.handleResourceResponse(c, args)
+		},
 		"html": func(args []any) (any, error) {
 			if len(args) == 0 {
 				return nil, c.HTML(http.StatusOK, "")
@@ -1358,5 +1973,186 @@ func (eng *Engine) invokeControllerMethod(ctrlName, methodName string, req, res 
 
 	_, err = eng.Evaluator.CallCallable(fnVal, []any{req, res})
 	return err
+}
+
+func (eng *Engine) handleResourceResponse(c *larapak.Context, args []any) (any, error) {
+	if len(args) == 0 {
+		return nil, c.JSON(http.StatusOK, map[string]any{"data": nil})
+	}
+
+	data := args[0]
+	var transformer any
+	if len(args) > 1 {
+		transformer = args[1]
+	}
+
+	var extraMeta map[string]any
+	if len(args) > 2 {
+		if em, ok := args[2].(map[string]any); ok {
+			extraMeta = em
+		}
+	}
+
+	// Helper to transform a single item
+	transformItem := func(item any) (any, error) {
+		if transformer == nil {
+			return item, nil
+		}
+		// If transformer is a closure function
+		if fn, ok := transformer.(*Function); ok {
+			return eng.Evaluator.CallCallable(fn, []any{item})
+		}
+		// If transformer is string name: "UserResource"
+		if resName, ok := transformer.(string); ok {
+			fn, err := eng.loadResourceTransformer(resName)
+			if err != nil {
+				return item, nil // fallback to untransformed item
+			}
+			return eng.Evaluator.CallCallable(fn, []any{item})
+		}
+		return item, nil
+	}
+
+	// 1. Check if data is a pagination result map (contains "data" and "total")
+	if pMap, ok := data.(map[string]any); ok {
+		if rawItems, hasData := pMap["data"]; hasData {
+			if _, hasTotal := pMap["total"]; hasTotal {
+				var transformedList []any
+				if list, ok := rawItems.([]any); ok {
+					for _, it := range list {
+						tr, err := transformItem(it)
+						if err != nil {
+							return nil, err
+						}
+						transformedList = append(transformedList, tr)
+					}
+				} else if list, ok := rawItems.([]map[string]any); ok {
+					for _, it := range list {
+						tr, err := transformItem(it)
+						if err != nil {
+							return nil, err
+						}
+						transformedList = append(transformedList, tr)
+					}
+				}
+				meta := map[string]any{
+					"total":        pMap["total"],
+					"per_page":     pMap["per_page"],
+					"current_page": pMap["current_page"],
+					"last_page":    pMap["last_page"],
+				}
+				if extraMeta != nil {
+					for k, v := range extraMeta {
+						meta[k] = v
+					}
+				}
+				return nil, c.JSON(http.StatusOK, map[string]any{
+					"data": transformedList,
+					"meta": meta,
+				})
+			}
+		}
+	}
+
+	// 2. Check if data is a slice/list of items
+	if list, ok := data.([]any); ok {
+		var transformedList []any
+		for _, it := range list {
+			tr, err := transformItem(it)
+			if err != nil {
+				return nil, err
+			}
+			transformedList = append(transformedList, tr)
+		}
+		resp := map[string]any{"data": transformedList}
+		if extraMeta != nil {
+			resp["meta"] = extraMeta
+		}
+		return nil, c.JSON(http.StatusOK, resp)
+	}
+	if list, ok := data.([]map[string]any); ok {
+		var transformedList []any
+		for _, it := range list {
+			tr, err := transformItem(it)
+			if err != nil {
+				return nil, err
+			}
+			transformedList = append(transformedList, tr)
+		}
+		resp := map[string]any{"data": transformedList}
+		if extraMeta != nil {
+			resp["meta"] = extraMeta
+		}
+		return nil, c.JSON(http.StatusOK, resp)
+	}
+
+	// 3. Single record (map or scalar)
+	single, err := transformItem(data)
+	if err != nil {
+		return nil, err
+	}
+	resp := map[string]any{"data": single}
+	if extraMeta != nil {
+		resp["meta"] = extraMeta
+	}
+	return nil, c.JSON(http.StatusOK, resp)
+}
+
+func (eng *Engine) loadResourceTransformer(resName string) (any, error) {
+	if !strings.HasSuffix(resName, "Resource") && !strings.HasSuffix(resName, "resource") {
+		resName += "Resource"
+	}
+	candidates := []string{
+		filepath.Join(eng.baseDir, "app", "Resources", resName+".ngpk"),
+		filepath.Join(eng.baseDir, "app", "Http", "Resources", resName+".ngpk"),
+		filepath.Join(eng.baseDir, "jeroan", "Sumber", resName+".ngpk"),
+		filepath.Join(eng.baseDir, "aplikasi", "Sumber", resName+".ngpk"),
+		filepath.Join(eng.baseDir, "resources", resName+".ngpk"),
+	}
+
+	var foundPath string
+	for _, p := range candidates {
+		if _, err := os.Stat(p); err == nil {
+			foundPath = p
+			break
+		}
+	}
+
+	if foundPath == "" {
+		return nil, fmt.Errorf("berkas resource transformer %s.ngpk ora ditemokna", resName)
+	}
+
+	content, err := os.ReadFile(foundPath)
+	if err != nil {
+		return nil, err
+	}
+
+	resEnv := NewEnvironment(eng.Evaluator.Globals)
+	lexer := NewLexer(string(content), foundPath)
+	tokens, err := lexer.Tokenize()
+	if err != nil {
+		return nil, err
+	}
+	parser := NewParser(tokens, foundPath)
+	ast, err := parser.Parse()
+	if err != nil {
+		return nil, err
+	}
+	_, err = eng.Evaluator.executeBlock(ast.Statements, resEnv)
+	if err != nil {
+		return nil, err
+	}
+
+	if fnVal, ok := resEnv.Get("transform"); ok {
+		return fnVal, nil
+	}
+	if fnVal, ok := resEnv.Get("ngowahi"); ok {
+		return fnVal, nil
+	}
+	if fnVal, ok := resEnv.Get("toArray"); ok {
+		return fnVal, nil
+	}
+
+	return nil, fmt.Errorf("fungsi 'transform' utawa 'ngowahi' ora ditemokna neng %s.ngpk", resName)
 }
 

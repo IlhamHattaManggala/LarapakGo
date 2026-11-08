@@ -2,6 +2,7 @@ package ngapak
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -518,6 +519,167 @@ rampung).wates(1, 10)
 	app.ServeHTTP(w2, req2)
 	if w2.Code != http.StatusTooManyRequests {
 		t.Fatalf("expected 429 on 2nd request, got %d", w2.Code)
+	}
+}
+
+func TestModelRelationshipsInNgapak(t *testing.T) {
+	tmpDir := t.TempDir()
+	app := larapak.New()
+	vEngine := view.New(tmpDir)
+	ngpkEngine := NewEngine(tmpDir, vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	script := `
+user = {
+    "id": 7,
+    "jeneng": "Slamet"
+}
+hasManySql = db.duwe_akeh(user, "artikels").toSql()
+
+artikel = {
+    "id": 99,
+    "user_id": 7,
+    "judul": "Sinau Ngapak"
+}
+belongsToSql = db.melu(artikel, "users").toSql()
+`
+	_, err := ngpkEngine.RunSource(script, "rel_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource failed: %v", err)
+	}
+
+	hSql, _ := ngpkEngine.Evaluator.Globals.Get("hasManySql")
+	if !strings.Contains(fmt.Sprintf("%v", hSql), "WHERE user_id = ?") {
+		t.Fatalf("expected user_id in hasManySql, got: %v", hSql)
+	}
+
+	bSql, _ := ngpkEngine.Evaluator.Globals.Get("belongsToSql")
+	if !strings.Contains(fmt.Sprintf("%v", bSql), "WHERE id = ?") {
+		t.Fatalf("expected id = ? in belongsToSql, got: %v", bSql)
+	}
+}
+
+func TestFactoryInNgapak(t *testing.T) {
+	tmpDir := t.TempDir()
+	app := larapak.New()
+	vEngine := view.New(tmpDir)
+	ngpkEngine := NewEngine(tmpDir, vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	script := `
+nama = pabrik.jeneng()
+surel = pabrik.email("Agus Santoso")
+telepon = pabrik.hp()
+kutha = pabrik.kutha()
+angka = pabrik.angka(10, 50)
+rega = pabrik.rega(10000, 50000)
+`
+	_, err := ngpkEngine.RunSource(script, "factory_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource factory failed: %v", err)
+	}
+
+	n, _ := ngpkEngine.Evaluator.Globals.Get("nama")
+	if n == "" || !strings.Contains(fmt.Sprintf("%v", n), " ") {
+		t.Fatalf("invalid nama from pabrik: %v", n)
+	}
+
+	s, _ := ngpkEngine.Evaluator.Globals.Get("surel")
+	if !strings.Contains(fmt.Sprintf("%v", s), "agus.santoso@") {
+		t.Fatalf("invalid surel from pabrik: %v", s)
+	}
+
+	tel, _ := ngpkEngine.Evaluator.Globals.Get("telepon")
+	if !strings.HasPrefix(fmt.Sprintf("%v", tel), "08") {
+		t.Fatalf("invalid hp from pabrik: %v", tel)
+	}
+}
+
+func TestRouteCacheInNgapak(t *testing.T) {
+	tmpDir := t.TempDir()
+	app := larapak.New()
+	vEngine := view.New(tmpDir)
+	ngpkEngine := NewEngine(tmpDir, vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	script := `
+rute.get("/api/produk-cepet", gawe(req, res)
+    balekna res.json({"status": "sukses", "produk": "Mendoan"})
+rampung).cache(5)
+`
+	_, err := ngpkEngine.RunSource(script, "cache_route_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource route cache failed: %v", err)
+	}
+
+	// 1st request -> MISS
+	req1 := httptest.NewRequest("GET", "/api/produk-cepet", nil)
+	w1 := httptest.NewRecorder()
+	app.ServeHTTP(w1, req1)
+	if w1.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w1.Code)
+	}
+	if w1.Header().Get("X-Larapak-Cache") != "MISS" {
+		t.Fatalf("expected MISS on 1st request, got: %s", w1.Header().Get("X-Larapak-Cache"))
+	}
+
+	// 2nd request -> HIT
+	req2 := httptest.NewRequest("GET", "/api/produk-cepet", nil)
+	w2 := httptest.NewRecorder()
+	app.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusOK {
+		t.Fatalf("expected 200 on 2nd, got %d", w2.Code)
+	}
+	if w2.Header().Get("X-Larapak-Cache") != "HIT" {
+		t.Fatalf("expected HIT on 2nd request, got: %s", w2.Header().Get("X-Larapak-Cache"))
+	}
+}
+
+func TestApiResourceTransformerInNgapak(t *testing.T) {
+	tmpDir := t.TempDir()
+	app := larapak.New()
+	vEngine := view.New(tmpDir)
+	ngpkEngine := NewEngine(tmpDir, vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	script := `
+rute.get("/api/user-profil", gawe(req, res)
+    user = {
+        "id": 1,
+        "jeneng": "Dewi Lestari",
+        "email": "dewi@example.com",
+        "password_hash": "rahasia_aja_disebar"
+    }
+    balekna res.resource(user, gawe(u)
+        balekna {
+            "id": u.id,
+            "jeneng": u.jeneng,
+            "email": u.email
+        }
+    rampung, {"pesan": "Sukses"})
+rampung)
+`
+	_, err := ngpkEngine.RunSource(script, "resource_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource resource test failed: %v", err)
+	}
+
+	req := httptest.NewRequest("GET", "/api/user-profil", nil)
+	w := httptest.NewRecorder()
+	app.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if strings.Contains(body, "password_hash") {
+		t.Fatalf("expected password_hash to be omitted by transformer: %s", body)
+	}
+	if !strings.Contains(body, `"data"`) || !strings.Contains(body, `"Dewi Lestari"`) {
+		t.Fatalf("expected data with Dewi Lestari: %s", body)
+	}
+	if !strings.Contains(body, `"meta"`) || !strings.Contains(body, `"Sukses"`) {
+		t.Fatalf("expected meta with Sukses: %s", body)
 	}
 }
 

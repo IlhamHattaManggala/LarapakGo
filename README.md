@@ -225,6 +225,35 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
     - Simpan file upload otomatis dengan nama unik: `foto = req.berkas("avatar"); path = foto.simpen_neng("avatars")`
     - Operasi berkas: `storage.simpen(path, isi)`, `storage.jupuk(path)`, `storage.ana(path)`, `storage.busak(path)`, `storage.dalan(path)`.
     - Helper aset di `.nview`: `<img src="{{ asset('avatars/avatar.png') }}" />`.
+  - **Asosiasi Relasi Model Database (`duwe_akeh` / `has_many`, `melu` / `belongs_to`)**:
+    ```python
+    # Ambil user beserta semua artikel miliknya (has_many)
+    user = db.tabel("users").neng("id", 1).siji()
+    artikels = user.duwe_akeh("artikels").neng("status", "publikasi").jupuk()
+
+    # Ambil artikel beserta data penulisnya (belongs_to)
+    artikel = db.tabel("artikels").neng("id", 10).siji()
+    penulis = artikel.melu("users").siji()
+    ```
+  - **Mesin Faker & Factory Data Dummy (`pabrik` / `factory`)**:
+    - Perintah CLI: `larapak gawe:pabrik User` / `larapak make:factory User`.
+    - Generator data palsu 100% Go Standard Library: `pabrik.jeneng()`, `pabrik.email()`, `pabrik.hp()`, `pabrik.alamat()`, `pabrik.kutha()`, `pabrik.teks(kata)`, `pabrik.angka(min, max)`, `pabrik.rega(min, max)`.
+    - Eksekusi seeder otomatis: `larapak db:seed` atau `larapak bibiti`.
+  - **Response Caching In-Memory (`cache` / `simpen_cache`)**:
+    ```python
+    # Simpan respons rute GET dalam cache in-memory selama 60 detik
+    rute.get("/api/katalog", "KatalogController@index").cache(60)
+    ```
+  - **JSON API Resource Transformer (`res.resource` / `res.sumber`)**:
+    - Perintah CLI: `larapak gawe:sumber-api User` / `larapak make:resource-api User`.
+    - Standarisasi output API ke format JSON:API modern:
+      ```python
+      res.resource(user, "UserResource", {"status": "sukses"})
+      # Atau menggunakan fungsi closure langsung:
+      res.resource(dataList, gawe(item)
+          balekna {"id": item.id, "jeneng": item.jeneng}
+      rampung)
+      ```
   - **Helper Variabel Lingkungan (`env` / `lingkungan`)**: `env("APP_NAME", "LarapakGo")` atau `lingkungan("DB_DATABASE", "storage/db.sqlite")` untuk membaca berkas `.env`.
   - Otomatis tersinkronisasi ke antarmuka Route & API Studio di `/_studio`.
 

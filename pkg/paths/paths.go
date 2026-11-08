@@ -15,9 +15,11 @@ type ProjectPaths struct {
 	Middleware   string
 	Jobs         string
 	Live         string
+	Resources    string
 	Database     string
 	Migrations   string
 	Seeders      string
+	Factories    string
 	Routes       string
 	Views        string
 	Public       string
@@ -35,9 +37,11 @@ var Config = map[string]ProjectPaths{
 		Middleware:   filepath.Join("jeroan", "Pencegat"),
 		Jobs:         filepath.Join("jeroan", "Gawean"),
 		Live:         filepath.Join("jeroan", "Urip"),
+		Resources:    filepath.Join("jeroan", "Sumber"),
 		Database:     "lumbung",
 		Migrations:   filepath.Join("lumbung", "owahan"),
 		Seeders:      filepath.Join("lumbung", "bibit"),
+		Factories:    filepath.Join("lumbung", "pabrik"),
 		Routes:       "dalan",
 		Views:        "sawangan",
 		Public:       "njobo",
@@ -52,9 +56,11 @@ var Config = map[string]ProjectPaths{
 		Middleware:   filepath.Join("aplikasi", "Penyaring"),
 		Jobs:         filepath.Join("aplikasi", "Tugas"),
 		Live:         filepath.Join("aplikasi", "Live"),
+		Resources:    filepath.Join("aplikasi", "Sumber"),
 		Database:     "basisdata",
 		Migrations:   filepath.Join("basisdata", "migrasi"),
 		Seeders:      filepath.Join("basisdata", "seeder"),
+		Factories:    filepath.Join("basisdata", "pabrik"),
 		Routes:       "rute",
 		Views:        "tampilan",
 		Public:       "publik",
@@ -69,9 +75,11 @@ var Config = map[string]ProjectPaths{
 		Middleware:   filepath.Join("app", "Middleware"),
 		Jobs:         filepath.Join("app", "Jobs"),
 		Live:         filepath.Join("app", "Live"),
+		Resources:    filepath.Join("app", "Resources"),
 		Database:     "database",
 		Migrations:   filepath.Join("database", "migrations"),
 		Seeders:      filepath.Join("database", "seeders"),
+		Factories:    filepath.Join("database", "factories"),
 		Routes:       "routes",
 		Views:        filepath.Join("resources", "views"),
 		Public:       "public",
@@ -144,9 +152,11 @@ func (p ProjectPaths) InDir(baseDir string) ProjectPaths {
 		Middleware:   filepath.Join(baseDir, p.Middleware),
 		Jobs:         filepath.Join(baseDir, p.Jobs),
 		Live:         filepath.Join(baseDir, p.Live),
+		Resources:    filepath.Join(baseDir, p.Resources),
 		Database:     filepath.Join(baseDir, p.Database),
 		Migrations:   filepath.Join(baseDir, p.Migrations),
 		Seeders:      filepath.Join(baseDir, p.Seeders),
+		Factories:    filepath.Join(baseDir, p.Factories),
 		Routes:       filepath.Join(baseDir, p.Routes),
 		Views:        filepath.Join(baseDir, p.Views),
 		Public:       filepath.Join(baseDir, p.Public),

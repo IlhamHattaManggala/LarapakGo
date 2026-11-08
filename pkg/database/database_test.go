@@ -206,3 +206,45 @@ func TestQueryBuilderPaginateStructure(t *testing.T) {
 		t.Fatalf("expected LIMIT 10 OFFSET 20 in query: %s", sql)
 	}
 }
+
+func TestRelationships(t *testing.T) {
+	conn := &Connection{dialect: SQLiteDialect{}}
+
+	// Test HasMany
+	user := map[string]any{"id": 42, "name": "Budi"}
+	hasManyQB, err := HasMany(conn, "users", user, "articles", "", "")
+	if err != nil {
+		t.Fatalf("HasMany failed: %v", err)
+	}
+	sql, bindings := hasManyQB.ToSelectSQL()
+	if !strings.Contains(sql, "WHERE user_id = ?") {
+		t.Fatalf("expected user_id in sql, got: %s", sql)
+	}
+	if len(bindings) != 1 || bindings[0] != 42 {
+		t.Fatalf("expected binding 42, got: %v", bindings)
+	}
+
+	// Test BelongsTo
+	article := map[string]any{"id": 100, "user_id": 42, "title": "Larapak Relasi"}
+	belongsToQB, err := BelongsTo(conn, article, "users", "", "")
+	if err != nil {
+		t.Fatalf("BelongsTo failed: %v", err)
+	}
+	bSQL, bBindings := belongsToQB.ToSelectSQL()
+	if !strings.Contains(bSQL, "WHERE id = ?") {
+		t.Fatalf("expected id = ? in sql, got: %s", bSQL)
+	}
+	if len(bBindings) != 1 || bBindings[0] != 42 {
+		t.Fatalf("expected binding 42, got: %v", bBindings)
+	}
+
+	// Test HasOne
+	hasOneQB, err := HasOne(conn, "users", user, "profiles", "", "")
+	if err != nil {
+		t.Fatalf("HasOne failed: %v", err)
+	}
+	hSQL, _ := hasOneQB.ToSelectSQL()
+	if !strings.Contains(hSQL, "LIMIT 1") {
+		t.Fatalf("expected LIMIT 1 in sql, got: %s", hSQL)
+	}
+}

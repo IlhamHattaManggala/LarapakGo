@@ -69,6 +69,11 @@ func (q *QueryBuilder) Dialect() Dialect {
 	return q.dialect
 }
 
+// TableName returns the target database table name.
+func (q *QueryBuilder) TableName() string {
+	return q.table
+}
+
 // SetExecutor assigns an active database connection or transaction executor.
 func (q *QueryBuilder) SetExecutor(e QueryExecutor) *QueryBuilder {
 	q.executor = e
