@@ -106,6 +106,12 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
   - Dialek Internasional: `db.table("users").select(...).where(...).orderBy(...).limit(...).get()`
   - Eksekusi DML & Agregasi: `siji()` / `first()`, `cacah()` / `count()`, `tambah()` / `insert()`, `owahi()` / `update()`, `busak()` / `delete()`.
 - **Pagination Bawaan**: Kalkulasi halaman otomatis via `db.tabel("produk").kaca(1, 10)` atau `db.table(...).paginate(page, perPage)` menghasilkan total baris, jumlah halaman, dan metadata navigasi secara rapi.
+- **Soft Deletes Bawaan**: Dukungan penapisan otomatis rekaman terhapus melalui kolom `deleted_at`:
+  - `db.tabel("produk").mbusak_alus()` / `db.table("produk").softDeletes()`
+  - `.karo_dibusek()` / `.withTrashed()`: menyertakan data yang telah dihapus dalam hasil query.
+  - `.mung_dibusek()` / `.only_trashed()`: hanya mengambil data yang berstatus dihapus lembut.
+  - `.balekna()` / `.restore()`: memulihkan rekaman yang terhapus (`deleted_at = NULL`).
+  - `.busak_permanen()` / `.force_delete()`: menghapus rekaman fisik secara permanen dari database.
 - **Schema & Migrations**: Blueprint pembangun skema tabel database (`ID()`, `String()`, `Integer()`, `Text()`, `Boolean()`, `Timestamps()`) yang otomatis beradaptasi dengan tipe data dialek target.
 
 ### 6. Mesin Validasi Formulir (`pkg/validation`) & Direktif `@error`
@@ -133,9 +139,10 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
 - **Fleksibel Caching (`pkg/cache`)**: Dukungan driver terpadu `CACHE_DRIVER=memory|redis`. Fitur `Get()`, `Set(key, val, ttl)`, `Delete()`, dan `Flush()`.
 - **Distributed Job Queues (`pkg/queue`)**: Pemrosesan antrean latar belakang `QUEUE_DRIVER=memory|redis` dengan metode non-busy-waiting `BRPOP` yang hemat CPU untuk arsitektur multi-server/multi-worker.
 
-### 8. Route & API Studio Bawaan & Database Inspector (`pkg/studio`)
+### 8. Route & API Studio Bawaan, Database Inspector & SQL Profiler (`pkg/studio`)
 - **Route & API Studio Interaktif**: Halaman pengujian API interaktif di `/_studio` dengan palet tema modern gelap dan **100% SVG icons** (tanpa emoticon).
 - **Database Inspector Visual**: Tab inspektur database bawaan untuk meninjau daftar tabel, struktur kolom, dan isi baris rekaman database (SQLite/MySQL/Postgres) langsung dari peramban web pada mode pengembangan lokal.
+- **Database Query Logger & SQL Profiler**: Tab profiler database bawaan yang merekam seluruh query SQL, parameter bindings, waktu eksekusi dalam milidetik, penanda visual query lambat (>10ms / >50ms), dan tombol pembersih log query via GUI maupun REST API (`/_studio/api/queries`).
 - Live testing request HTTP & pratinjau respons.
 - Ekspor otomatis ke spesifikasi standar **OpenAPI 3.0.3** JSON di `/_studio/openapi.json`.
 
@@ -174,6 +181,8 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
   - `larapak db:seed` / `larapak bibiti`
   - `larapak queue:work` / `larapak gawean:tandang`
   - `larapak cache:clear` / `larapak resik:cache`
+  - `larapak down` / `larapak dandan [--secret=...] [--pesan=...] [--retry=...]` (Mode Perawatan / Maintenance Mode)
+  - `larapak up` / `larapak mari` (Nonaktifkan Mode Perawatan / Kembali Online)
   - `larapak css:build` / `larapak rikat:rakit`
   - `larapak test` / `larapak coba`
   - `larapak help` / `larapak tulung`
@@ -254,6 +263,29 @@ Agar penulisan kode skrip `.ngpk` (NgapakIn) dan template `.nview` (Sawangan) ny
           balekna {"id": item.id, "jeneng": item.jeneng}
       rampung)
       ```
+  - **Sistem Lokalisasi & Kamus Multi-Bahasa (`basa` / `lang`)**:
+    - Kamus terjemahan JSON di folder `kamus/` atau `resources/lang/` (misal: `id.json`, `en.json`).
+    - Skrip `.ngpk`: `basa.jupuk("pesan.salam", {"jeneng": "Budi"})` / `lang.trans("welcome")`.
+    - Template `.nview`: `@basa("pesan.salam")` atau `{{ trans("welcome") }}` atau `{{ __("auth.failed") }}`.
+    - Penggantian locale dinamis: `basa.setLocale("en")` / `basa.saiki()`.
+  - **Sistem Event & Listener (`kedadeyan` / `event`)**:
+    - Registrasi listener:
+      ```python
+      kedadeyan.rungokna("pesanan.digawe", gawe(ev, payload)
+          tulis("Pesanan anyar: " + payload.id)
+      rampung)
+      ```
+    - Pengiriman event sinkron: `kedadeyan.kirim("pesanan.digawe", {"id": "INV-001"})`.
+    - Pengiriman event asinkron: `kedadeyan.kirim_async("pesanan.digawe", payload)`.
+  - **Soft Deletes pada Query ORM (`mbusak_alus` / `karo_dibusek`)**:
+    ```python
+    # Mengambil hanya data yang belum dihapus
+    produks = basisdata.tabel("produks").mbusak_alus().neng("kategori", "buku").jupuk()
+    # Mengambil data termasuk yang berstatus soft-deleted
+    kabeh = basisdata.tabel("produks").mbusak_alus().karo_dibusek().jupuk()
+    # Memulihkan data
+    basisdata.tabel("produks").neng("id", 10).balekna()
+    ```
   - **Helper Variabel Lingkungan (`env` / `lingkungan`)**: `env("APP_NAME", "LarapakGo")` atau `lingkungan("DB_DATABASE", "storage/db.sqlite")` untuk membaca berkas `.env`.
   - Otomatis tersinkronisasi ke antarmuka Route & API Studio di `/_studio`.
 

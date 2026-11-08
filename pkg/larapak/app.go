@@ -26,6 +26,7 @@ func New() *App {
 
 	// Default global middlewares
 	app.Use(Recover())
+	app.Use(Maintenance())
 	app.Use(Logger())
 
 	return app

@@ -120,6 +120,36 @@ Versi 1.0.0 menandai peluncuran perdana arsitektur web framework Larapak yang di
   - Helper controller `res.resource(data, "NamaResource")` / `res.sumber(...)` atau menggunakan closure `gawe(item) ... rampung`.
   - Mendukung transformasi rekaman tunggal (single record), daftar rekaman (list), maupun hasil paginasi (`.kaca()` / `.paginate()`) dengan metadata otomatis.
 
+- **Database Query Logger & SQL Profiler (`pkg/database`, `pkg/studio`)**:
+  - Buffer sirkular in-memory thread-safe yang mencatat query SQL yang dieksekusi, parameter bindings, durasi eksekusi dalam milidetik, timestamp, dan status error.
+  - Tab visual "SQL Profiler" terintegrasi pada Route & API Studio (`/_studio`) lengkap dengan metrik total query, total waktu eksekusi, penanda query lambat (>10ms / >50ms), dan tombol pembersih log.
+  - Endpoint REST API profiler bawaan di `/_studio/api/queries` dan `/_studio/api/queries/clear`.
+
+- **Sistem Lokalisasi & Kamus Multi-Bahasa (`pkg/lang`, `basa` / `lang`)**:
+  - Kamus terjemahan JSON multi-bahasa dengan dukungan hierarki kunci bertingkat (`auth.failed`).
+  - Interpolasi dinamis placeholder (`:placeholder`, `{placeholder}`) melalui map maupun argumen pasangan kunci-nilai variadik.
+  - Manajemen bahasa aktif dan fallback locale otomatis (`basa.jupuk()`, `basa.terjemah()`, `basa.saiki()`, `basa.setLocale()`).
+  - Integrasi mesin template Sawangan: direktif `@basa("key")`, `@lang("key")`, `@trans("key")` serta interpolasi `{{ basa("key") }}`, `{{ trans("key") }}`, `{{ __("key") }}`.
+
+- **Sistem Event & Listener (`pkg/event`, `kedadeyan` / `event`)**:
+  - Dispatcher pub/sub thread-safe native 100% Go Standard Library tanpa dependensi eksternal.
+  - Objek global `kedadeyan` dan `event` di skrip `.ngpk`:
+    - `kedadeyan.rungokna(nama, callback)` / `event.listen(...)`
+    - `kedadeyan.kirim(nama, payload)` / `event.dispatch(...)` (eksekusi sinkron)
+    - `kedadeyan.kirim_async(nama, payload)` / `event.dispatchAsync(...)` (eksekusi asinkron latar belakang)
+    - `kedadeyan.lalekna(nama)` / `event.forget(...)`
+
+- **Mode Perawatan / Maintenance Mode (`pkg/larapak`, `larapak dandan` / `larapak mari`)**:
+  - Perintah CLI `larapak dandan` / `larapak down` (`--secret=...`, `--pesan=...`, `--retry=...`) dan `larapak mari` / `larapak up`.
+  - Respons otomatis HTTP 503 Service Unavailable dengan header `Retry-After`.
+  - Tampilan HTML modern dark-mode dengan ikon SVG teknis murni (tanpa emoticon) serta respons JSON otomatis untuk request API (`/api/*`).
+  - Mekanisme bypass token rahasia via URL query parameter (`?bypass=<secret>`) dan cookie HTTP-only otomatis.
+
+- **Soft Deletes pada Query Builder & Database ORM (`pkg/database`, `pkg/ngapak`)**:
+  - Kolom `deleted_at` otomatis terisi timestamp saat `qb.Delete()` / `qb.busak()` dipanggil pada query dengan soft deletes aktif.
+  - Penapisan otomatis rekaman terhapus pada seluruh query `SELECT`.
+  - Metode chaining: `.karo_dibusek()` / `.withTrashed()` (menampilkan seluruh data termasuk yang terhapus), `.mung_dibusek()` / `.only_trashed()` (hanya menampilkan data terhapus), `.balekna()` / `.restore()` (memulihkan rekaman terhapus), `.busak_permanen()` / `.force_delete()` (menghapus fisik secara permanen dari database).
+
 - **Dual-Language CLI & Multi-Language Directory Scaffolding**:
   - Mendukung 22 pasangan perintah dalam bahasa Inggris dan dialek Ngapak Tegalan (`anyar`, `ladeni`, `dalan:daptar`, `gawe:pangatur`, `munggah`, `mudhun`, `resik:cache`, dll).
   - Dukungan pembuatan struktur direktori multi-bahasa (`--bahasa=ngapak|indonesia|english`).

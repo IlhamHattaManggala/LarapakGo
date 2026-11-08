@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/IlhamHattaManggala/larapak-go/pkg/database"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/event"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/factory"
+	"github.com/IlhamHattaManggala/larapak-go/pkg/lang"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/larapak"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/mail"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/paths"
@@ -391,6 +393,8 @@ func (eng *Engine) BindRoutesWithStudio(app *larapak.App, st *studio.Studio) {
 		},
 	}
 	eng.Evaluator.Globals.Set("db", dbObj)
+	eng.Evaluator.Globals.Set("database", dbObj)
+	eng.Evaluator.Globals.Set("basisdata", dbObj)
 
 	// Bind 'pabrik' and 'factory' global objects for fake data generation & seeding
 	faker := factory.Default()
@@ -658,6 +662,176 @@ func (eng *Engine) BindRoutesWithStudio(app *larapak.App, st *studio.Studio) {
 	}
 	eng.Evaluator.Globals.Set("sandi", sandiObj)
 	eng.Evaluator.Globals.Set("hash", sandiObj)
+
+	// Bind 'basa' and 'lang' for localization & multi-language translation
+	basaObj := map[string]any{
+		"jupuk": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return "", nil
+			}
+			key := fmt.Sprintf("%v", args[0])
+			return lang.GetTranslator().Trans(key, args[1:]...), nil
+		},
+		"get": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return "", nil
+			}
+			key := fmt.Sprintf("%v", args[0])
+			return lang.GetTranslator().Trans(key, args[1:]...), nil
+		},
+		"terjemah": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return "", nil
+			}
+			key := fmt.Sprintf("%v", args[0])
+			return lang.GetTranslator().Trans(key, args[1:]...), nil
+		},
+		"trans": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return "", nil
+			}
+			key := fmt.Sprintf("%v", args[0])
+			return lang.GetTranslator().Trans(key, args[1:]...), nil
+		},
+		"saiki": func(args []any) (any, error) {
+			return lang.GetTranslator().GetLocale(), nil
+		},
+		"getLocale": func(args []any) (any, error) {
+			return lang.GetTranslator().GetLocale(), nil
+		},
+		"ganti": func(args []any) (any, error) {
+			if len(args) > 0 {
+				lang.GetTranslator().SetLocale(fmt.Sprintf("%v", args[0]))
+			}
+			return nil, nil
+		},
+		"set": func(args []any) (any, error) {
+			if len(args) > 0 {
+				lang.GetTranslator().SetLocale(fmt.Sprintf("%v", args[0]))
+			}
+			return nil, nil
+		},
+		"setLocale": func(args []any) (any, error) {
+			if len(args) > 0 {
+				lang.GetTranslator().SetLocale(fmt.Sprintf("%v", args[0]))
+			}
+			return nil, nil
+		},
+		"muat": func(args []any) (any, error) {
+			if len(args) > 0 {
+				return nil, lang.GetTranslator().LoadDir(fmt.Sprintf("%v", args[0]))
+			}
+			return nil, nil
+		},
+		"load": func(args []any) (any, error) {
+			if len(args) > 0 {
+				return nil, lang.GetTranslator().LoadDir(fmt.Sprintf("%v", args[0]))
+			}
+			return nil, nil
+		},
+	}
+	eng.Evaluator.Globals.Set("basa", basaObj)
+	eng.Evaluator.Globals.Set("lang", basaObj)
+
+	// Bind 'kedadeyan' and 'event' for Event & Listener system
+	kedadeyanObj := map[string]any{
+		"rungokna": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("kedadeyan.rungokna mbutuhna jeneng event lan fungsi handler")
+			}
+			eventName := fmt.Sprintf("%v", args[0])
+			handler := args[1]
+			event.GetDispatcher().Listen(eventName, func(ev string, payload any) error {
+				_, err := eng.Evaluator.CallCallable(handler, []any{ev, payload})
+				return err
+			})
+			return nil, nil
+		},
+		"listen": func(args []any) (any, error) {
+			if len(args) < 2 {
+				return nil, fmt.Errorf("event.listen requires event name and handler function")
+			}
+			eventName := fmt.Sprintf("%v", args[0])
+			handler := args[1]
+			event.GetDispatcher().Listen(eventName, func(ev string, payload any) error {
+				_, err := eng.Evaluator.CallCallable(handler, []any{ev, payload})
+				return err
+			})
+			return nil, nil
+		},
+		"kirim": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("kedadeyan.kirim mbutuhna jeneng event")
+			}
+			eventName := fmt.Sprintf("%v", args[0])
+			var payload any
+			if len(args) > 1 {
+				payload = args[1]
+			}
+			errs := event.GetDispatcher().Dispatch(eventName, payload)
+			if len(errs) > 0 {
+				return false, errs[0]
+			}
+			return true, nil
+		},
+		"dispatch": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("event.dispatch requires event name")
+			}
+			eventName := fmt.Sprintf("%v", args[0])
+			var payload any
+			if len(args) > 1 {
+				payload = args[1]
+			}
+			errs := event.GetDispatcher().Dispatch(eventName, payload)
+			if len(errs) > 0 {
+				return false, errs[0]
+			}
+			return true, nil
+		},
+		"kirim_async": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("kedadeyan.kirim_async mbutuhna jeneng event")
+			}
+			eventName := fmt.Sprintf("%v", args[0])
+			var payload any
+			if len(args) > 1 {
+				payload = args[1]
+			}
+			event.GetDispatcher().DispatchAsync(eventName, payload)
+			return true, nil
+		},
+		"dispatchAsync": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("event.dispatchAsync requires event name")
+			}
+			eventName := fmt.Sprintf("%v", args[0])
+			var payload any
+			if len(args) > 1 {
+				payload = args[1]
+			}
+			event.GetDispatcher().DispatchAsync(eventName, payload)
+			return true, nil
+		},
+		"lalekna": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("kedadeyan.lalekna mbutuhna jeneng event")
+			}
+			eventName := fmt.Sprintf("%v", args[0])
+			event.GetDispatcher().Forget(eventName)
+			return nil, nil
+		},
+		"forget": func(args []any) (any, error) {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("event.forget requires event name")
+			}
+			eventName := fmt.Sprintf("%v", args[0])
+			event.GetDispatcher().Forget(eventName)
+			return nil, nil
+		},
+	}
+	eng.Evaluator.Globals.Set("kedadeyan", kedadeyanObj)
+	eng.Evaluator.Globals.Set("event", kedadeyanObj)
 
 	// Bind 'env' and 'lingkungan' helper
 	envFn := func(args []any) (any, error) {
@@ -1374,6 +1548,61 @@ func createQueryBuilderBridge(qb *database.QueryBuilder) map[string]any {
 				pag["data"] = wrappedList
 			}
 			return pag, nil
+		},
+		"mbusak_alus": func(args []any) (any, error) {
+			qb.SoftDeletes()
+			return bridge, nil
+		},
+		"nganggo_soft_delete": func(args []any) (any, error) {
+			qb.SoftDeletes()
+			return bridge, nil
+		},
+		"soft_deletes": func(args []any) (any, error) {
+			qb.SoftDeletes()
+			return bridge, nil
+		},
+		"softDeletes": func(args []any) (any, error) {
+			qb.SoftDeletes()
+			return bridge, nil
+		},
+		"karo_dibusek": func(args []any) (any, error) {
+			qb.WithTrashed()
+			return bridge, nil
+		},
+		"with_trashed": func(args []any) (any, error) {
+			qb.WithTrashed()
+			return bridge, nil
+		},
+		"withTrashed": func(args []any) (any, error) {
+			qb.WithTrashed()
+			return bridge, nil
+		},
+		"mung_dibusek": func(args []any) (any, error) {
+			qb.OnlyTrashed()
+			return bridge, nil
+		},
+		"only_trashed": func(args []any) (any, error) {
+			qb.OnlyTrashed()
+			return bridge, nil
+		},
+		"onlyTrashed": func(args []any) (any, error) {
+			qb.OnlyTrashed()
+			return bridge, nil
+		},
+		"balekna": func(args []any) (any, error) {
+			return qb.Restore()
+		},
+		"restore": func(args []any) (any, error) {
+			return qb.Restore()
+		},
+		"busak_permanen": func(args []any) (any, error) {
+			return qb.ForceDelete()
+		},
+		"force_delete": func(args []any) (any, error) {
+			return qb.ForceDelete()
+		},
+		"forceDelete": func(args []any) (any, error) {
+			return qb.ForceDelete()
 		},
 	}
 	return bridge

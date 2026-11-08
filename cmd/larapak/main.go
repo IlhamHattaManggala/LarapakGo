@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -229,6 +230,12 @@ func main() {
 	case "cache:clear", "resik:cache", "resiki:cache":
 		clearCache()
 
+	case "down", "dandan":
+		handleDownCommand(args)
+
+	case "up", "mari":
+		handleUpCommand(args)
+
 	case "package:install", "paket:pasang", "pasang:paket":
 		pkgName := "paket"
 		if len(args) > 0 {
@@ -315,6 +322,8 @@ Perintah Dialek Ngapak (Asli):
   larapak bibiti                                (Jalankna database seeder)
   larapak gawean:tandang                        (Jalankna queue worker)
   larapak resik:cache                           (Resiki cache sistem)
+  larapak dandan [--secret=...] [--pesan=...]   (Aktifna mode dandan / maintenance mode)
+  larapak mari                                  (Pateni mode dandan / bali online)
   larapak rikat:rakit                           (Kompilasi Rikat CSS JIT)
   larapak coba                                  (Jalankna kabeh test suite)
   larapak mlakukna <berkas.ngpk>                (Jalankna skrip basa NgapakIn)
@@ -325,7 +334,7 @@ Perintah Dialek Ngapak (Asli):
 Perintah Standar (Laravel Artisan Style):
   larapak new, serve, route:list, make:auth, make:resource, make:resource-api, make:controller, make:model, make:factory, make:live, make:migration,
   make:middleware, make:job, make:seeder, migrate, migrate:fresh, migrate:status,
-  rollback, db:seed, queue:work, cache:clear, css:build, run, repl, test, help, version
+  rollback, db:seed, queue:work, cache:clear, down, up, css:build, run, repl, test, help, version
 
 Dokumentasi Resmi: https://larapak.my.id
 `, version)
@@ -383,6 +392,49 @@ func startNgapakREPL() {
 			fmt.Println(res)
 		}
 	}
+}
+
+func handleDownCommand(args []string) {
+	secret := ""
+	message := "Aplikasi lagi didandani (maintenance mode)."
+	retry := 60
+
+	for _, a := range args {
+		if strings.HasPrefix(a, "--secret=") {
+			secret = strings.TrimPrefix(a, "--secret=")
+		} else if strings.HasPrefix(a, "--pesan=") {
+			message = strings.TrimPrefix(a, "--pesan=")
+		} else if strings.HasPrefix(a, "--message=") {
+			message = strings.TrimPrefix(a, "--message=")
+		} else if strings.HasPrefix(a, "--retry=") {
+			if r, err := strconv.Atoi(strings.TrimPrefix(a, "--retry=")); err == nil {
+				retry = r
+			}
+		}
+	}
+
+	data, err := larapak.Down(secret, message, retry)
+	if err != nil {
+		fmt.Printf("[!] Gagal ngaktifna mode dandan: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("[OK] Mode dandan (maintenance mode) wis diaktifna.")
+	fmt.Printf("[i] Pesan       : %s\n", data.Message)
+	fmt.Printf("[i] Retry After : %d detik\n", data.Retry)
+	if data.Secret != "" {
+		fmt.Printf("[i] Bypass Token: %s\n", data.Secret)
+		fmt.Printf("[i] Bypass URL  : http://localhost:8080?bypass=%s\n", data.Secret)
+	}
+}
+
+func handleUpCommand(args []string) {
+	err := larapak.Up()
+	if err != nil {
+		fmt.Printf("[!] Gagal mateni mode dandan: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println("[OK] Mode dandan wis dipateni. Aplikasi saiki wis online maning.")
 }
 
 func handleNgapakCommand(cmd string, args []string) {

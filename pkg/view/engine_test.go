@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/IlhamHattaManggala/larapak-go/pkg/lang"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/rikatlive"
 )
 
@@ -214,5 +215,32 @@ func TestEngineAssetAndFallbackInterpolation(t *testing.T) {
 	}
 	if !strings.Contains(out, `value="Deskripsi Asli"`) {
 		t.Fatalf("expected item.katerangan fallback to be used, got:\n%s", out)
+	}
+}
+
+func TestEngineTranslationDirectives(t *testing.T) {
+	lang.GetTranslator().AddMessages("id", map[string]string{
+		"welcome": "Sugeng rawuh sedulur",
+		"button.save": "Simpen",
+	})
+	lang.SetLocale("id")
+
+	engine := New("")
+	tmpl := `<div>
+    <h1>@basa("welcome")</h1>
+    <button>{{ trans("button.save") }}</button>
+    <span>{{ __("welcome") }}</span>
+</div>`
+
+	out, err := engine.RenderString(tmpl, nil)
+	if err != nil {
+		t.Fatalf("failed to render: %v", err)
+	}
+
+	if !strings.Contains(out, "Sugeng rawuh sedulur") {
+		t.Fatalf("expected translated text in output, got:\n%s", out)
+	}
+	if !strings.Contains(out, "<button>Simpen</button>") {
+		t.Fatalf("expected Simpen button, got:\n%s", out)
 	}
 }

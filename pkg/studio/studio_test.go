@@ -48,4 +48,20 @@ func TestStudioRegistrationAndOpenAPI(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &jsonSpec); err != nil {
 		t.Fatalf("invalid json from openapi handler: %v", err)
 	}
+
+	// Test Profiler queries endpoint
+	reqQ := httptest.NewRequest(http.MethodGet, "/_studio/api/queries", nil)
+	wQ := httptest.NewRecorder()
+	st.Handler().ServeHTTP(wQ, reqQ)
+	if wQ.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK from queries handler, got %d", wQ.Code)
+	}
+
+	var jsonQueries map[string]any
+	if err := json.Unmarshal(wQ.Body.Bytes(), &jsonQueries); err != nil {
+		t.Fatalf("invalid json from queries handler: %v", err)
+	}
+	if _, ok := jsonQueries["queries"]; !ok {
+		t.Fatal("expected 'queries' field in response")
+	}
 }

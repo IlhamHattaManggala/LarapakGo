@@ -3,6 +3,7 @@ package database
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestQueryBuilderSelect(t *testing.T) {
@@ -246,5 +247,52 @@ func TestRelationships(t *testing.T) {
 	hSQL, _ := hasOneQB.ToSelectSQL()
 	if !strings.Contains(hSQL, "LIMIT 1") {
 		t.Fatalf("expected LIMIT 1 in sql, got: %s", hSQL)
+	}
+}
+
+func TestSoftDeletes(t *testing.T) {
+	// 1. Normal select with soft deletes -> adds WHERE deleted_at IS NULL
+	qb1 := Table("products").SoftDeletes().Where("category", "buku")
+	sql1, _ := qb1.ToSelectSQL()
+	if !strings.Contains(sql1, "category = ? AND deleted_at IS NULL") {
+		t.Fatalf("expected deleted_at IS NULL, got: %s", sql1)
+	}
+
+	// 2. WithTrashed -> includes deleted records
+	qb2 := Table("products").SoftDeletes().WithTrashed().Where("category", "buku")
+	sql2, _ := qb2.ToSelectSQL()
+	if strings.Contains(sql2, "deleted_at IS NULL") {
+		t.Fatalf("expected no deleted_at filter in withTrashed, got: %s", sql2)
+	}
+
+	// 3. OnlyTrashed -> adds WHERE deleted_at IS NOT NULL
+	qb3 := Table("products").SoftDeletes().OnlyTrashed().Where("category", "buku")
+	sql3, _ := qb3.ToSelectSQL()
+	if !strings.Contains(sql3, "category = ? AND deleted_at IS NOT NULL") {
+		t.Fatalf("expected deleted_at IS NOT NULL, got: %s", sql3)
+	}
+}
+
+func TestProfiler(t *testing.T) {
+	prof := GetProfiler()
+	prof.Clear()
+
+	prof.Record("SELECT * FROM users WHERE id = ?", []any{1}, 5*time.Millisecond, nil)
+	prof.Record("INSERT INTO logs (action) VALUES (?)", []any{"login"}, 2*time.Millisecond, nil)
+
+	count, totalMS := prof.Stats()
+	if count != 2 {
+		t.Fatalf("expected 2 queries, got %d", count)
+	}
+	if totalMS <= 0 {
+		t.Fatalf("expected positive totalMS, got %f", totalMS)
+	}
+
+	queries := prof.Queries()
+	if len(queries) != 2 {
+		t.Fatalf("expected 2 queries, got %d", len(queries))
+	}
+	if !strings.Contains(queries[0].SQL, "INSERT INTO logs") {
+		t.Fatalf("expected latest query first, got: %s", queries[0].SQL)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/IlhamHattaManggala/larapak-go/pkg/lang"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/rikatlive"
 )
 
@@ -229,6 +230,26 @@ func (e *Engine) RenderString(content string, data map[string]any) (string, erro
 				return rendered
 			}
 			return fmt.Sprintf("<!-- RikatLive Error: %v -->", err)
+		}
+		return match
+	})
+
+	// Handle translation directives: @basa("key") or @lang("key") or @trans("key")
+	transDirPattern := regexp.MustCompile(`@(?:basa|lang|trans)\s*\(\s*["']([^"']+)["']\s*\)`)
+	output = transDirPattern.ReplaceAllStringFunc(output, func(match string) string {
+		sub := transDirPattern.FindStringSubmatch(match)
+		if len(sub) > 1 {
+			return html.EscapeString(lang.Trans(sub[1]))
+		}
+		return match
+	})
+
+	// Handle translation interpolations: {{ basa("key") }}, {{ trans("key") }}, {{ __("key") }}
+	transPattern := regexp.MustCompile(`\{\{\s*(?:basa|trans|__)\s*\(\s*["']([^"']+)["']\s*\)\s*\}\}`)
+	output = transPattern.ReplaceAllStringFunc(output, func(match string) string {
+		sub := transPattern.FindStringSubmatch(match)
+		if len(sub) > 1 {
+			return html.EscapeString(lang.Trans(sub[1]))
 		}
 		return match
 	})

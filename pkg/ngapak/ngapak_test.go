@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/IlhamHattaManggala/larapak-go/pkg/lang"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/larapak"
 	"github.com/IlhamHattaManggala/larapak-go/pkg/view"
 )
@@ -682,6 +683,98 @@ rampung)
 		t.Fatalf("expected meta with Sukses: %s", body)
 	}
 }
+
+func TestBasaAndLangInNgapak(t *testing.T) {
+	tmpDir := t.TempDir()
+	app := larapak.New()
+	vEngine := view.New(tmpDir)
+	ngpkEngine := NewEngine(tmpDir, vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	lang.GetTranslator().AddMessages("id", map[string]string{
+		"salam": "Halo :jeneng, sugeng rawuh!",
+	})
+	lang.SetLocale("id")
+
+	script := `
+pesan = basa.jupuk("salam", {"jeneng": "Kurniawan"})
+basa_saiki = basa.saiki()
+`
+	_, err := ngpkEngine.RunSource(script, "basa_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource basa failed: %v", err)
+	}
+
+	p, _ := ngpkEngine.Evaluator.Globals.Get("pesan")
+	if p != "Halo Kurniawan, sugeng rawuh!" {
+		t.Fatalf("unexpected pesan: %v", p)
+	}
+
+	b, _ := ngpkEngine.Evaluator.Globals.Get("basa_saiki")
+	if b != "id" {
+		t.Fatalf("unexpected basa_saiki: %v", b)
+	}
+}
+
+func TestKedadeyanAndEventInNgapak(t *testing.T) {
+	tmpDir := t.TempDir()
+	app := larapak.New()
+	vEngine := view.New(tmpDir)
+	ngpkEngine := NewEngine(tmpDir, vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	script := `
+hasil_notifikasi = ""
+kedadeyan.rungokna("pesanan.digawe", gawe(ev, payload)
+    hasil_notifikasi = "Pesanan mlebu: " + payload.kode
+rampung)
+
+kedadeyan.kirim("pesanan.digawe", {"kode": "INV-999"})
+`
+	_, err := ngpkEngine.RunSource(script, "event_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource event failed: %v", err)
+	}
+
+	h, _ := ngpkEngine.Evaluator.Globals.Get("hasil_notifikasi")
+	if h != "Pesanan mlebu: INV-999" {
+		t.Fatalf("unexpected hasil_notifikasi: %v", h)
+	}
+}
+
+func TestSoftDeletesInNgapak(t *testing.T) {
+	tmpDir := t.TempDir()
+	app := larapak.New()
+	vEngine := view.New(tmpDir)
+	ngpkEngine := NewEngine(tmpDir, vEngine)
+	ngpkEngine.BindRoutes(app)
+
+	script := `
+sql1 = basisdata.tabel("produks").mbusak_alus().neng("kategori", "elektronik").toSql()
+sql2 = basisdata.tabel("produks").mbusak_alus().karo_dibusek().toSql()
+sql3 = basisdata.tabel("produks").mbusak_alus().mung_dibusek().toSql()
+`
+	_, err := ngpkEngine.RunSource(script, "soft_delete_test.ngpk")
+	if err != nil {
+		t.Fatalf("RunSource soft delete failed: %v", err)
+	}
+
+	s1, _ := ngpkEngine.Evaluator.Globals.Get("sql1")
+	if !strings.Contains(fmt.Sprintf("%v", s1), "deleted_at IS NULL") {
+		t.Fatalf("expected deleted_at IS NULL in sql1, got: %v", s1)
+	}
+
+	s2, _ := ngpkEngine.Evaluator.Globals.Get("sql2")
+	if strings.Contains(fmt.Sprintf("%v", s2), "deleted_at IS NULL") {
+		t.Fatalf("expected karo_dibusek to not contain deleted_at IS NULL, got: %v", s2)
+	}
+
+	s3, _ := ngpkEngine.Evaluator.Globals.Get("sql3")
+	if !strings.Contains(fmt.Sprintf("%v", s3), "deleted_at IS NOT NULL") {
+		t.Fatalf("expected mung_dibusek to contain deleted_at IS NOT NULL, got: %v", s3)
+	}
+}
+
 
 
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // QueryExecutor defines the database interface needed for QueryBuilder execution.
@@ -16,16 +17,19 @@ type QueryExecutor interface {
 
 // QueryBuilder provides fluent SQL query construction with parameter binding and dialect support.
 type QueryBuilder struct {
-	table     string
-	columns   []string
-	wheres    []whereClause
-	joins     []joinClause
-	orderBys  []string
-	limitVal  int
-	offsetVal int
-	bindings  []any
-	dialect   Dialect
-	executor  QueryExecutor
+	table       string
+	columns     []string
+	wheres      []whereClause
+	joins       []joinClause
+	orderBys    []string
+	limitVal    int
+	offsetVal   int
+	bindings    []any
+	dialect     Dialect
+	executor    QueryExecutor
+	softDeletes bool
+	withTrashed bool
+	onlyTrashed bool
 }
 
 type whereClause struct {
@@ -165,6 +169,39 @@ func (q *QueryBuilder) Offset(offset int) *QueryBuilder {
 	return q
 }
 
+// SoftDeletes enables soft-delete filtering and marking for this query.
+func (q *QueryBuilder) SoftDeletes() *QueryBuilder {
+	q.softDeletes = true
+	return q
+}
+
+// MbusakAlus is the Ngapak alias for SoftDeletes.
+func (q *QueryBuilder) MbusakAlus() *QueryBuilder {
+	return q.SoftDeletes()
+}
+
+// WithTrashed includes soft-deleted records in query results.
+func (q *QueryBuilder) WithTrashed() *QueryBuilder {
+	q.withTrashed = true
+	return q
+}
+
+// KaroDibusek is the Ngapak alias for WithTrashed.
+func (q *QueryBuilder) KaroDibusek() *QueryBuilder {
+	return q.WithTrashed()
+}
+
+// OnlyTrashed limits results to soft-deleted records only.
+func (q *QueryBuilder) OnlyTrashed() *QueryBuilder {
+	q.onlyTrashed = true
+	return q
+}
+
+// MungDibusek is the Ngapak alias for OnlyTrashed.
+func (q *QueryBuilder) MungDibusek() *QueryBuilder {
+	return q.OnlyTrashed()
+}
+
 // ToSelectSQL compiles the builder into a parameterized SELECT query and its bound arguments.
 func (q *QueryBuilder) ToSelectSQL() (string, []any) {
 	d := q.Dialect()
@@ -179,17 +216,31 @@ func (q *QueryBuilder) ToSelectSQL() (string, []any) {
 		sb.WriteString(fmt.Sprintf(" %s JOIN %s ON %s %s %s", j.joinType, j.table, j.first, j.operator, j.second))
 	}
 
+	// Prepare effective WHERE clauses including soft-delete filters
+	effectiveWheres := append([]whereClause(nil), q.wheres...)
+	if q.softDeletes {
+		if q.onlyTrashed {
+			effectiveWheres = append(effectiveWheres, whereClause{boolean: "AND", column: "deleted_at", operator: "IS NOT NULL"})
+		} else if !q.withTrashed {
+			effectiveWheres = append(effectiveWheres, whereClause{boolean: "AND", column: "deleted_at", operator: "IS NULL"})
+		}
+	}
+
 	// Wheres
-	if len(q.wheres) > 0 {
+	if len(effectiveWheres) > 0 {
 		sb.WriteString(" WHERE ")
-		for i, w := range q.wheres {
+		for i, w := range effectiveWheres {
 			if i > 0 {
 				sb.WriteString(fmt.Sprintf(" %s ", w.boolean))
 			}
-			ph := d.Placeholder(paramIdx)
-			paramIdx++
-			sb.WriteString(fmt.Sprintf("%s %s %s", w.column, w.operator, ph))
-			bindings = append(bindings, w.value)
+			if w.operator == "IS NULL" || w.operator == "IS NOT NULL" {
+				sb.WriteString(fmt.Sprintf("%s %s", w.column, w.operator))
+			} else {
+				ph := d.Placeholder(paramIdx)
+				paramIdx++
+				sb.WriteString(fmt.Sprintf("%s %s %s", w.column, w.operator, ph))
+				bindings = append(bindings, w.value)
+			}
 		}
 	}
 
@@ -305,7 +356,9 @@ func (q *QueryBuilder) Get() ([]map[string]any, error) {
 	}
 
 	query, args := q.ToSelectSQL()
+	start := time.Now()
 	rows, err := q.executor.Query(query, args...)
+	GetProfiler().Record(query, args, time.Since(start), err)
 	if err != nil {
 		return nil, err
 	}
@@ -375,10 +428,13 @@ func (q *QueryBuilder) Count() (int64, error) {
 	}()
 
 	query, args := q.ToSelectSQL()
+	start := time.Now()
 	row := q.executor.QueryRow(query, args...)
 
 	var count int64
-	if err := row.Scan(&count); err != nil {
+	err := row.Scan(&count)
+	GetProfiler().Record(query, args, time.Since(start), err)
+	if err != nil {
 		return 0, err
 	}
 	return count, nil
@@ -437,7 +493,10 @@ func (q *QueryBuilder) Insert(data map[string]any) (sql.Result, error) {
 		return nil, err
 	}
 	query, args := q.ToInsertSQL(data)
-	return q.executor.Exec(query, args...)
+	start := time.Now()
+	res, err := q.executor.Exec(query, args...)
+	GetProfiler().Record(query, args, time.Since(start), err)
+	return res, err
 }
 
 // Update executes an UPDATE statement with the provided key-value map.
@@ -446,14 +505,54 @@ func (q *QueryBuilder) Update(data map[string]any) (sql.Result, error) {
 		return nil, err
 	}
 	query, args := q.ToUpdateSQL(data)
-	return q.executor.Exec(query, args...)
+	start := time.Now()
+	res, err := q.executor.Exec(query, args...)
+	GetProfiler().Record(query, args, time.Since(start), err)
+	return res, err
 }
 
-// Delete executes a DELETE statement based on current WHERE conditions.
+// Delete executes a DELETE statement, or marks deleted_at timestamp if softDeletes is enabled.
 func (q *QueryBuilder) Delete() (sql.Result, error) {
+	if q.softDeletes {
+		return q.Update(map[string]any{
+			"deleted_at": time.Now().Format("2006-01-02 15:04:05"),
+		})
+	}
 	if err := q.checkExecutor(); err != nil {
 		return nil, err
 	}
 	query, args := q.ToDeleteSQL()
-	return q.executor.Exec(query, args...)
+	start := time.Now()
+	res, err := q.executor.Exec(query, args...)
+	GetProfiler().Record(query, args, time.Since(start), err)
+	return res, err
+}
+
+// ForceDelete permanently removes records from the database using raw SQL DELETE.
+func (q *QueryBuilder) ForceDelete() (sql.Result, error) {
+	if err := q.checkExecutor(); err != nil {
+		return nil, err
+	}
+	query, args := q.ToDeleteSQL()
+	start := time.Now()
+	res, err := q.executor.Exec(query, args...)
+	GetProfiler().Record(query, args, time.Since(start), err)
+	return res, err
+}
+
+// BusakPermanen is the Ngapak alias for ForceDelete.
+func (q *QueryBuilder) BusakPermanen() (sql.Result, error) {
+	return q.ForceDelete()
+}
+
+// Restore restores soft-deleted records by setting deleted_at to NULL.
+func (q *QueryBuilder) Restore() (sql.Result, error) {
+	return q.Update(map[string]any{
+		"deleted_at": nil,
+	})
+}
+
+// Balekna is the Ngapak alias for Restore.
+func (q *QueryBuilder) Balekna() (sql.Result, error) {
+	return q.Restore()
 }

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/IlhamHattaManggala/larapak-go/pkg/database"
 )
 
 // RouteInfo holds metadata about an individual registered route for Studio and OpenAPI.
@@ -241,6 +243,10 @@ func (s *Studio) RenderHTML() string {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
                 Database Inspector
             </button>
+            <button class="nav-btn" id="btnModeProfiler" onclick="switchView('profiler')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                SQL Profiler
+            </button>
         </div>
 
         <div>
@@ -336,23 +342,60 @@ func (s *Studio) RenderHTML() string {
         </main>
     </div>
 
+    <!-- 3. VIEW: SQL PROFILER -->
+    <div class="main-layout" id="viewProfiler" style="display: none; flex-direction: column;">
+        <div class="db-header-bar">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-sky);"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                <span style="font-weight: 600; font-size: 14px;">Database Query Profiler</span>
+                <span class="badge badge-ver" id="profQueryCount">0 queries</span>
+                <span class="badge badge-env" id="profTotalTime">0.00 ms</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="nav-btn" onclick="clearProfilerData()" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--color-rose);">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Resiki Log
+                </button>
+                <button class="nav-btn" onclick="loadProfilerData()" style="background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    Muat Ulang
+                </button>
+            </div>
+        </div>
+
+        <div class="data-table-wrap" id="profTableArea">
+            <div class="empty-state">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                <div style="font-weight: 500; color: var(--text-primary); font-size: 14px;">Durung Ana Query SQL sing Dicathet</div>
+                <div style="font-size: 12px; max-width: 360px;">Saben query SELECT, INSERT, UPDATE, lan DELETE bakal otomatis dicathet lan diukur wektu eksekusine neng kene.</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const routes = %s;
         let dbTables = [];
         let selectedTable = '';
 
         function switchView(mode) {
+            document.getElementById('viewRoutes').style.display = 'none';
+            document.getElementById('viewDatabase').style.display = 'none';
+            document.getElementById('viewProfiler').style.display = 'none';
+            document.getElementById('btnModeRoutes').classList.remove('active');
+            document.getElementById('btnModeDB').classList.remove('active');
+            document.getElementById('btnModeProfiler').classList.remove('active');
+
             if (mode === 'routes') {
                 document.getElementById('viewRoutes').style.display = 'flex';
-                document.getElementById('viewDatabase').style.display = 'none';
                 document.getElementById('btnModeRoutes').classList.add('active');
-                document.getElementById('btnModeDB').classList.remove('active');
-            } else {
-                document.getElementById('viewRoutes').style.display = 'none';
+            } else if (mode === 'database') {
                 document.getElementById('viewDatabase').style.display = 'flex';
                 document.getElementById('btnModeDB').classList.add('active');
-                document.getElementById('btnModeRoutes').classList.remove('active');
                 loadTables();
+            } else if (mode === 'profiler') {
+                document.getElementById('viewProfiler').style.display = 'flex';
+                document.getElementById('btnModeProfiler').classList.add('active');
+                loadProfilerData();
             }
         }
 
@@ -493,6 +536,64 @@ func (s *Studio) RenderHTML() string {
                 });
         }
 
+        function loadProfilerData() {
+            const area = document.getElementById('profTableArea');
+            fetch('/_studio/api/queries')
+                .then(r => r.json())
+                .then(d => {
+                    const queries = d.queries || [];
+                    document.getElementById('profQueryCount').textContent = (d.count || queries.length) + ' queries';
+                    document.getElementById('profTotalTime').textContent = (d.total_ms ? d.total_ms.toFixed(2) : '0.00') + ' ms';
+
+                    if (queries.length === 0) {
+                        area.innerHTML = `+"`"+`
+                            <div class="empty-state">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                                <div style="font-weight: 500; color: var(--text-primary); font-size: 14px;">Durung Ana Query SQL sing Dicathet</div>
+                                <div style="font-size: 12px; max-width: 360px;">Saben query SELECT, INSERT, UPDATE, lan DELETE bakal otomatis dicathet lan diukur wektu eksekusine neng kene.</div>
+                            </div>
+                        `+"`"+`;
+                        return;
+                    }
+
+                    let html = '<table class="db-table"><thead><tr>';
+                    html += '<th style="width: 100px;">Duration</th><th style="width: 130px;">Wektu</th><th>SQL Query</th><th style="width: 180px;">Bindings</th><th style="width: 80px;">Status</th>';
+                    html += '</tr></thead><tbody>';
+
+                    queries.forEach(q => {
+                        const durColor = q.duration_ms > 50 ? 'var(--color-rose)' : (q.duration_ms > 10 ? 'var(--color-amber)' : 'var(--color-emerald)');
+                        const statusBadge = q.error ? '<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--color-rose);">ERROR</span>' : '<span class="badge" style="background:rgba(16,185,129,0.15);color:var(--color-emerald);">OK</span>';
+                        const timeStr = q.timestamp ? q.timestamp.substring(11, 19) : '-';
+                        const bindingsStr = q.bindings && q.bindings.length > 0 ? escapeHtml(JSON.stringify(q.bindings)) : '<span style="color:var(--text-muted);">-</span>';
+
+                        html += '<tr>';
+                        html += '<td style="font-weight:600; color:' + durColor + ';">' + (q.duration_ms ? q.duration_ms.toFixed(2) : '0.00') + ' ms</td>';
+                        html += '<td style="color:var(--text-secondary);">' + timeStr + '</td>';
+                        html += '<td style="color:var(--text-primary); word-break:break-all;"><code>' + escapeHtml(q.sql) + '</code></td>';
+                        html += '<td style="color:var(--text-secondary); font-size:11px;">' + bindingsStr + '</td>';
+                        html += '<td>' + statusBadge + '</td>';
+                        html += '</tr>';
+                    });
+
+                    html += '</tbody></table>';
+                    area.innerHTML = html;
+                })
+                .catch(err => {
+                    area.innerHTML = '<div style="color:var(--color-rose); font-size:12px;">Gagal ngunggah data query profiler: ' + err.message + '</div>';
+                });
+        }
+
+        function clearProfilerData() {
+            fetch('/_studio/api/queries/clear', { method: 'POST' })
+                .then(r => r.json())
+                .then(() => {
+                    loadProfilerData();
+                })
+                .catch(err => {
+                    alert('Gagal ngresiki data profiler: ' + err.message);
+                });
+        }
+
         function escapeHtml(str) {
             return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
@@ -511,6 +612,25 @@ func (s *Studio) Handler() http.HandlerFunc {
 		if path == "/_studio/openapi.json" || path == "/studio/openapi.json" {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			_ = json.NewEncoder(w).Encode(s.GenerateOpenAPI())
+			return
+		}
+
+		if path == "/_studio/api/queries" || path == "/studio/api/queries" {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			prof := database.GetProfiler()
+			count, totalMS := prof.Stats()
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"queries":  prof.Queries(),
+				"count":    count,
+				"total_ms": totalMS,
+			})
+			return
+		}
+
+		if (path == "/_studio/api/queries/clear" || path == "/studio/api/queries/clear") && r.Method == "POST" {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			database.GetProfiler().Clear()
+			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
 			return
 		}
 
